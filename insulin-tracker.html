@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Insulin Log" />
+  <title>Insulin Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:       #111111;
+      --bg2:      #1a1a1a;
+      --bg3:      #222222;
+      --border:   rgba(255,255,255,0.09);
+      --accent:   #4ecda4;
+      --accent2:  #38a882;
+      --text:     #f0f0f0;
+      --text2:    #aaaaaa;
+      --text3:    #606060;
+      --pill-blue:   rgba(60,130,210,0.7);
+      --pill-green:  rgba(58,173,132,0.7);
+      --pill-amber:  rgba(200,150,50,0.7);
+      --pill-purple: rgba(160,110,240,0.6);
+      --tag-bg:   rgba(160,110,240,0.15);
+      --tag-border: rgba(160,110,240,0.3);
+      --tag-text: #c5a5ff;
+      --red:      rgba(255,80,80,0.15);
+      --red-border: rgba(255,80,80,0.3);
+      --red-text: #ff9999;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overscroll-behavior: none;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(135deg, #0d0d0d 0%, #1c1c1c 100%);
+      border-bottom: 1px solid var(--border);
+      padding: calc(16px + var(--safe-top)) 20px 16px;
+      text-align: center;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px; color: var(--accent);
+      letter-spacing: 0.3px;
+    }
+    .header p { font-size: 11px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 3px; }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      background: #0a0a0a;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 73px; z-index: 40;
+    }
+    .tab-btn {
+      flex: 1; padding: 12px 4px; background: none; border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--text3); font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+
+    /* ── CONTENT ── */
+    .content {
+      max-width: 500px; margin: 0 auto;
+      padding: 20px 16px calc(30px + var(--safe-bot));
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── FORM CARD ── */
+    .form-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 18px; padding: 22px; margin-bottom: 16px;
+      animation: slideIn 0.3s ease;
+    }
+    .field-label {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--text2); margin-bottom: 7px; font-weight: 700;
+    }
+    .field-label .badge {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text3); font-weight: 400;
+    }
+    .field-label .badge.req { color: var(--accent); }
+    input[type=text], input[type=number], textarea {
+      width: 100%; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+      padding: 12px 14px; color: var(--text); font-size: 15px;
+      font-family: 'DM Sans', sans-serif; outline: none;
+      margin-bottom: 14px; transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    textarea { resize: none; line-height: 1.5; }
+    input:focus { border-color: rgba(255,255,255,0.35); }
+    input::placeholder { color: var(--text3); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── TAG PREVIEW ── */
+    .tag-preview { display: flex; flex-wrap: wrap; gap: 6px; margin: -8px 0 12px; }
+    .tag-chip {
+      background: var(--tag-bg); border: 1px solid var(--tag-border);
+      border-radius: 20px; padding: 3px 10px; font-size: 11px; color: var(--tag-text);
+    }
+
+    /* ── SAVE BTN ── */
+    .save-btn {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      border: none; border-radius: 12px; color: #fff;
+      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700;
+      cursor: pointer; margin-top: 2px;
+      box-shadow: 0 4px 20px rgba(78,205,164,0.25);
+      transition: transform 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none;
+    }
+    .save-btn:active { transform: scale(0.98); }
+
+    /* ── SEARCH ── */
+    .search-wrap { position: relative; margin-bottom: 6px; }
+    .search-input {
+      width: 100%; background: var(--bg2);
+      border: 1px solid rgba(255,255,255,0.13); border-radius: 12px;
+      padding: 13px 42px 13px 18px; color: var(--text); font-size: 15px;
+      font-family: 'DM Sans', sans-serif; outline: none; margin-bottom: 0;
+      -webkit-appearance: none;
+    }
+    .search-icon { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 16px; pointer-events: none; }
+    .search-hint { font-size: 12px; color: var(--text3); margin-bottom: 14px; padding-left: 4px; }
+    .search-hint span { color: var(--tag-text); }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--text3); margin-bottom: 14px; font-weight: 700;
+    }
+
+    /* ── FOOD CARD ── */
+    .food-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 15px 16px; margin-bottom: 10px;
+      animation: slideIn 0.25s ease; transition: border-color 0.2s, background 0.2s;
+    }
+    .food-card.editing {
+      background: rgba(78,205,164,0.06);
+      border-color: rgba(78,205,164,0.35);
+    }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card-info { flex: 1; min-width: 0; }
+    .food-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 17px; color: #e8e8e8; margin-bottom: 7px;
+      text-transform: capitalize; word-break: break-word;
+    }
+    .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+    .pill {
+      border-radius: 20px; padding: 3px 11px;
+      font-size: 12px; font-weight: 700; color: #fff;
+    }
+    .pill-amber  { background: var(--pill-amber); }
+    .pill-blue   { background: var(--pill-blue); }
+    .pill-green  { background: var(--pill-green); }
+    .card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+    .card-tag { background: var(--tag-bg); border: 1px solid var(--tag-border); border-radius: 20px; padding: 2px 9px; font-size: 11px; color: var(--tag-text); }
+    .card-tag.matched { background: rgba(160,110,240,0.3); border-color: var(--tag-text); }
+    .card-meta { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+    .card-remarks { font-size: 13px; color: var(--text2); margin-top: 7px; line-height: 1.5; font-style: italic; }
+    .card-date { font-size: 11px; color: var(--text3); }
+    .match-note { font-size: 11px; color: var(--tag-text); }
+    .card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-edit {
+      background: rgba(78,205,164,0.1); border: 1px solid rgba(78,205,164,0.25);
+      border-radius: 8px; color: var(--accent); padding: 7px 10px;
+      cursor: pointer; font-size: 14px; font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
+    }
+    .btn-edit:active { background: rgba(78,205,164,0.2); }
+    .btn-del {
+      background: var(--red); border: 1px solid var(--red-border);
+      border-radius: 8px; color: var(--red-text); padding: 7px 10px;
+      cursor: pointer; font-size: 14px; font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
+    }
+    .btn-del:active { background: rgba(255,80,80,0.25); }
+
+    /* ── EDIT FORM ── */
+    .edit-form {
+      margin-top: 14px; padding-top: 14px;
+      border-top: 1px solid var(--border);
+      animation: expandIn 0.2s ease;
+    }
+    .edit-label {
+      display: block; font-size: 11px; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text2);
+      margin-bottom: 5px; font-weight: 700;
+    }
+    .edit-input {
+      width: 100%; background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.13); border-radius: 8px;
+      padding: 10px 12px; color: var(--text); font-size: 14px;
+      font-family: 'DM Sans', sans-serif; outline: none;
+      margin-bottom: 10px; -webkit-appearance: none;
+    }
+    .edit-input:focus { border-color: rgba(255,255,255,0.35); }
+    .edit-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .edit-btns { display: flex; gap: 8px; margin-top: 4px; }
+    .btn-save-edit {
+      flex: 1; padding: 11px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      border: none; border-radius: 9px; color: #fff;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700;
+      cursor: pointer; -webkit-appearance: none;
+    }
+    .btn-cancel-edit {
+      flex: 1; padding: 11px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 9px; color: var(--text2);
+      font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer;
+      -webkit-appearance: none;
+    }
+
+    /* ── EMPTY ── */
+    .empty {
+      text-align: center; padding: 60px 20px;
+      color: var(--text3); font-size: 15px; line-height: 2;
+    }
+    .empty .emoji { font-size: 40px; display: block; margin-bottom: 12px; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: calc(28px + var(--safe-bot)); left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--accent2); color: #fff;
+      padding: 11px 26px; border-radius: 30px; font-size: 14px;
+      font-family: 'DM Sans', sans-serif; font-weight: 600;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 999; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes expandIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🩺 Insulin Tracker</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('log')">+ Log</button>
+  <button class="tab-btn" onclick="switchTab('search')">🔍 Search</button>
+  <button class="tab-btn" id="all-tab-btn" onclick="switchTab('all')">All</button>
+</div>
+
+<div class="content">
+
+  <!-- LOG -->
+  <div id="tab-log" class="tab-panel active">
+    <div class="form-card">
+      <div class="field-label">Food Name</div>
+      <input type="text" id="f-food" placeholder="" />
+
+      <div class="row2">
+        <div>
+          <div class="field-label">Amount</div>
+          <input type="text" id="f-amount" placeholder="" />
+        </div>
+        <div>
+          <div class="field-label">Insulin (u)</div>
+          <input type="text" id="f-insulin" placeholder="" />
+        </div>
+      </div>
+
+      <div class="field-label">Tags</div>
+      <input type="text" id="f-tags" placeholder="" oninput="updateTagPreview()" />
+      <div class="tag-preview" id="tag-preview"></div>
+
+      <div class="field-label">Remarks</div>
+      <textarea id="f-remarks" rows="3" placeholder=""></textarea>
+
+      <button class="save-btn" onclick="addEntry()">Save Entry</button>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div id="tab-search" class="tab-panel">
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="search-input"
+        placeholder="Search food name or tag…"
+        oninput="renderSearch()" />
+      <span class="search-icon">⌕</span>
+    </div>
+    <div id="search-hint" class="search-hint" style="display:none"></div>
+    <div id="search-results"></div>
+  </div>
+
+  <!-- ALL -->
+  <div id="tab-all" class="tab-panel">
+    <div id="all-results"></div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const STORAGE_KEY = 'insulin-tracker-v1';
+  let entries = [];
+  let editingId = null;
+
+  // ── LOAD ──
+  function loadEntries() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      entries = raw ? JSON.parse(raw) : [];
+    } catch { entries = []; }
+  }
+
+  function saveEntries() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch {}
+  }
+
+  // ── TABS ──
+  function switchTab(name) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    const btns = document.querySelectorAll('.tab-btn');
+    const idx = ['log','search','all'].indexOf(name);
+    btns[idx].classList.add('active');
+    if (name === 'search') renderSearch();
+    if (name === 'all') renderAll();
+  }
+
+  // ── TAG PREVIEW ──
+  function parseTags(str) {
+    if (!str || !str.trim()) return [];
+    return str.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+  }
+
+  function updateTagPreview() {
+    const tags = parseTags(document.getElementById('f-tags').value);
+    const el = document.getElementById('tag-preview');
+    el.innerHTML = tags.map(t => `<span class="tag-chip">#${t}</span>`).join('');
+  }
+
+  // ── ADD ENTRY ──
+  function addEntry() {
+    const food = document.getElementById('f-food').value.trim();
+    const amount = document.getElementById('f-amount').value.trim();
+    const insulin = document.getElementById('f-insulin').value.trim();
+    const tags = parseTags(document.getElementById('f-tags').value);
+    const remarks = document.getElementById('f-remarks').value.trim();
+
+    if (!food) { showToast('Food name is required'); return; }
+    if (!amount && !insulin) {
+      showToast('Add at least amount or insulin'); return;
+    }
+
+    const entry = {
+      id: Date.now(),
+      food,
+      amount: amount || null,
+      insulin: insulin || null,
+      tags,
+      remarks: remarks || null,
+      date: new Date().toLocaleDateString('en-SG', { day:'numeric', month:'short', year:'numeric' })
+    };
+
+    entries.unshift(entry);
+    saveEntries();
+
+    document.getElementById('f-food').value = '';
+    document.getElementById('f-amount').value = '';
+    document.getElementById('f-insulin').value = '';
+    document.getElementById('f-tags').value = '';
+    document.getElementById('f-remarks').value = '';
+    document.getElementById('tag-preview').innerHTML = '';
+
+    updateAllTabCount();
+    showToast('✓ Saved!');
+    switchTab('all');
+  }
+
+  // ── DELETE ──
+  function deleteEntry(id) {
+    entries = entries.filter(e => e.id !== id);
+    saveEntries();
+    updateAllTabCount();
+    renderSearch();
+    renderAll();
+    showToast('Removed');
+  }
+
+  // ── EDIT ──
+  function startEdit(id) {
+    editingId = id;
+    renderAll();
+    renderSearch();
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    renderAll();
+    renderSearch();
+  }
+
+  function saveEdit(id) {
+    const food = document.getElementById('edit-food-' + id).value.trim();
+    if (!food) { showToast('Food name is required'); return; }
+    const amount = document.getElementById('edit-amount-' + id).value.trim();
+    const insulin = document.getElementById('edit-insulin-' + id).value.trim();
+    const tags = parseTags(document.getElementById('edit-tags-' + id).value);
+    const remarks = document.getElementById('edit-remarks-' + id).value.trim();
+
+    entries = entries.map(e => e.id === id ? {
+      ...e, food,
+      amount: amount || null,
+      insulin: insulin || null,
+      tags,
+      remarks: remarks || null,
+    } : e);
+
+    saveEntries();
+    editingId = null;
+    updateAllTabCount();
+    renderAll();
+    renderSearch();
+    showToast('✓ Updated!');
+  }
+
+  // ── RENDER CARD ──
+  function renderCard(entry, query='') {
+    const isEditing = editingId === entry.id;
+    const q = query.toLowerCase();
+    const nameMatch = q && entry.food.toLowerCase().includes(q);
+    const matchedTag = q ? (entry.tags || []).find(t => t.includes(q)) : null;
+    const showMatchNote = q && !nameMatch && matchedTag;
+
+    const pillsHTML = [
+      entry.amount  ? `<span class="pill pill-amber">📏 ${escHtml(entry.amount)}</span>` : '',
+      entry.insulin != null ? `<span class="pill pill-green" style="font-size:14.4px">💉 ${escHtml(entry.insulin)}u</span>` : '',
+    ].join('');
+
+    const tagsHTML = (entry.tags || []).length
+      ? `<div class="card-tags">${(entry.tags).map(t =>
+          `<span class="card-tag ${t === matchedTag ? 'matched':''}">#${t}</span>`
+        ).join('')}</div>` : '';
+
+    const remarksHTML = entry.remarks
+      ? `<div class="card-remarks">${escHtml(entry.remarks)}</div>` : '';
+
+    const editFormHTML = isEditing ? `
+      <div class="edit-form">
+        <label class="edit-label">Food Name</label>
+        <input class="edit-input" type="text" id="edit-food-${entry.id}" value="${escHtml(entry.food)}" />
+        <div class="edit-row2">
+          <div>
+            <label class="edit-label">Amount</label>
+            <input class="edit-input" type="text" id="edit-amount-${entry.id}" value="${escHtml(entry.amount||'')}" />
+          </div>
+          <div>
+            <label class="edit-label">Insulin (u)</label>
+            <input class="edit-input" type="text" id="edit-insulin-${entry.id}" value="${escHtml(entry.insulin||'')}" />
+          </div>
+        </div>
+        <label class="edit-label">Tags (comma-separated)</label>
+        <input class="edit-input" type="text" id="edit-tags-${entry.id}" value="${escHtml((entry.tags||[]).join(', '))}" />
+        <label class="edit-label">Remarks</label>
+        <textarea class="edit-input" id="edit-remarks-${entry.id}" rows="3" style="resize:none;line-height:1.5">${escHtml(entry.remarks||'')}</textarea>
+        <div class="edit-btns">
+          <button class="btn-save-edit" onclick="saveEdit(${entry.id})">Save Changes</button>
+          <button class="btn-cancel-edit" onclick="cancelEdit()">Cancel</button>
+        </div>
+      </div>` : '';
+
+    return `
+      <div class="food-card ${isEditing ? 'editing' : ''}">
+        <div class="card-top">
+          <div class="card-info">
+            <div class="food-name">${escHtml(entry.food)}</div>
+            <div class="pills">${pillsHTML}</div>
+            ${tagsHTML}
+            ${remarksHTML}
+            <div class="card-meta">
+              <span class="card-date">${entry.date}</span>
+              ${showMatchNote ? `<span class="match-note">↑ matched tag</span>` : ''}
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="btn-edit" onclick="${isEditing ? 'cancelEdit()' : 'startEdit(' + entry.id + ')'}">${isEditing ? '✕' : '✏️'}</button>
+            <button class="btn-del" onclick="deleteEntry(${entry.id})">🗑</button>
+          </div>
+        </div>
+        ${editFormHTML}
+      </div>`;
+  }
+
+  // ── RENDER SEARCH ──
+  function renderSearch() {
+    const q = (document.getElementById('search-input')?.value || '').trim();
+    const hint = document.getElementById('search-hint');
+    const results = document.getElementById('search-results');
+
+    const filtered = entries.filter(e => {
+      if (!q) return true;
+      const ql = q.toLowerCase();
+      return e.food.toLowerCase().includes(ql) || (e.tags||[]).some(t => t.includes(ql));
+    });
+
+    if (q) {
+      hint.style.display = 'block';
+      hint.innerHTML = `${filtered.length} result${filtered.length!==1?'s':''} for "${escHtml(q)}" <span>· searches tags too</span>`;
+    } else {
+      hint.style.display = 'none';
+    }
+
+    if (filtered.length === 0) {
+      results.innerHTML = `<div class="empty"><span class="emoji">${entries.length===0?'🍚':'🔍'}</span>${entries.length===0?'No entries yet.<br>Log your first food!':'Nothing found for "'+escHtml(q)+'"'}</div>`;
+    } else {
+      results.innerHTML = filtered.map(e => renderCard(e, q)).join('');
+    }
+  }
+
+  // ── RENDER ALL ──
+  function renderAll() {
+    const el = document.getElementById('all-results');
+    if (entries.length === 0) {
+      el.innerHTML = `<div class="empty"><span class="emoji">🍚</span>No entries yet.<br>Log your first food!</div>`;
+      return;
+    }
+    el.innerHTML = `<div class="section-title">All entries · ${entries.length} total</div>`
+      + entries.map(e => renderCard(e, '')).join('');
+  }
+
+  function updateAllTabCount() {
+    document.getElementById('all-tab-btn').textContent =
+      entries.length > 0 ? `All (${entries.length})` : 'All';
+  }
+
+  // ── TOAST ──
+  let toastTimer;
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  // ── ESCAPE HTML ──
+  function escHtml(str) {
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── INIT ──
+  loadEntries();
+  updateAllTabCount();
+</script>
+</body>
+</html>
