@@ -1,0 +1,2139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Gluco Diary"/>
+  <title>Gluco Diary</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --bg:#111;--bg2:#1a1a1a;--border:rgba(255,255,255,0.09);
+      --accent:#4ecda4;--accent2:#38a882;
+      --text:#f0f0f0;--text2:#aaa;--text3:#606060;
+      --pill-green:rgba(58,173,132,0.75);--pill-amber:rgba(200,150,50,0.75);--pill-red:rgba(220,80,80,0.75);
+      --tag-bg:rgba(160,110,240,0.15);--tag-border:rgba(160,110,240,0.3);--tag-text:#c5a5ff;
+      --star:#f5c518;--red:rgba(255,80,80,0.15);--red-b:rgba(255,80,80,0.3);--red-t:#ff9999;
+      --safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100dvh;overscroll-behavior:none}
+    .header{background:linear-gradient(135deg,#0d0d0d,#1c1c1c);border-bottom:1px solid var(--border);padding:calc(16px + var(--safe-top)) 20px 16px;text-align:center;position:sticky;top:0;z-index:50}
+    .header h1{font-family:'DM Serif Display',serif;font-size:22px;color:var(--accent)}
+    .tabs{display:flex;background:#0a0a0a;border-bottom:1px solid var(--border);position:sticky;top:61px;z-index:40}
+    .tab-btn{flex:1;padding:12px 4px;background:none;border:none;border-bottom:3px solid transparent;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:color .2s,border-color .2s}
+    .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+    .content{max-width:500px;margin:0 auto;padding:20px 16px calc(30px + var(--safe-bot))}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+    .form-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:16px;animation:slideIn .3s ease}
+    .form-divider{border:none;border-top:1px solid var(--border);margin:18px 0}
+    .section-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-weight:700;margin-bottom:14px}
+    .field-label{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text2);margin-bottom:7px;font-weight:700}
+    input[type=text],input[type=number],textarea{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;transition:border-color .2s;-webkit-appearance:none}
+    input:focus,textarea:focus{border-color:rgba(255,255,255,.35)}
+    input::placeholder,textarea::placeholder{color:var(--text3)}
+    textarea{resize:none;line-height:1.5}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    /* ── MASKED TIMESTAMP ── */
+    .ts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+    .ts-field{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:0;display:flex;align-items:center;overflow:visible;transition:border-color .2s;position:relative}
+    .ts-field:focus-within{border-color:rgba(255,255,255,.35)}
+    .ts-seg{background:none;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;text-align:center;-webkit-appearance:none;padding:12px 0}
+    .ts-sep{color:var(--text3);font-size:15px;flex-shrink:0;user-select:none;pointer-events:none}
+    .ts-dd{width:30px}
+    .ts-mon{width:38px;cursor:pointer;caret-color:transparent}
+    .ts-yyyy{width:46px}
+    .ts-hh{width:28px}
+    .ts-mm{width:28px}
+    .ts-ampm{width:34px;cursor:pointer;caret-color:transparent;font-weight:700;color:var(--accent)}
+
+    /* ── PICKER POPUP ── */
+    .picker-popup{position:fixed;z-index:400;background:#242424;border:1px solid rgba(255,255,255,.18);border-radius:14px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.7);display:none;flex-direction:column}
+    .picker-popup.show{display:flex}
+    .picker-list{overflow-y:scroll;-webkit-overflow-scrolling:touch;overscroll-behavior:none;touch-action:pan-y;position:relative}
+    .picker-item{height:54px;display:flex;align-items:center;justify-content:center;font-size:20px;font-family:'DM Sans',sans-serif;color:var(--text2);cursor:pointer;transition:color .15s,background .15s;user-select:none;border-radius:8px}
+    .picker-item.selected{color:var(--accent);font-weight:700;font-size:22px;background:rgba(78,205,164,.1);}
+    .picker-item.tap-highlight{color:var(--accent);font-weight:700;background:rgba(78,205,164,.15);}
+
+    /* ── EDIT FORM TIMESTAMP ── */
+    .edit-ts-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .edit-ts-field{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);border-radius:8px;display:flex;align-items:center;overflow:visible;transition:border-color .2s;position:relative}
+    .edit-ts-field:focus-within{border-color:rgba(255,255,255,.35)}
+    .edit-ts-seg{background:none;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;text-align:center;-webkit-appearance:none;padding:10px 0}
+    .edit-ts-sep{color:var(--text3);font-size:14px;flex-shrink:0;user-select:none;pointer-events:none}
+    .edit-ts-dd{width:26px}
+    .edit-ts-mon{width:34px;cursor:pointer;caret-color:transparent}
+    .edit-ts-yyyy{width:42px}
+    .edit-ts-hh{width:24px}
+    .edit-ts-mm{width:24px}
+    .edit-ts-ampm{width:30px;cursor:pointer;caret-color:transparent;font-weight:700;color:var(--accent)}
+
+    /* ── GLUCOSE + EVENT ROW ── */
+    .gluco-event-wrap{display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:start}
+    .gluco-left{display:flex;flex-direction:column}
+    .gluco-right{display:flex;flex-direction:column}
+    .glucose-hero{background:rgba(255,255,255,.05);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;justify-content:space-between;flex:1}
+    .glucose-hero input{background:none;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:30px;font-weight:700;width:100%;-webkit-appearance:none;padding:0;line-height:1.1;margin-top:2px}
+    .glucose-hero input::placeholder{color:var(--text3);font-size:20px;font-weight:400}
+    .glucose-unit{font-size:10px;color:var(--text3);letter-spacing:.5px;margin-top:6px}
+    /* ── EVENT PILLS — 2 per row ── */
+    .ctx-pills{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+    .ctx-pill{padding:6px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.04);color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;-webkit-appearance:none;text-align:center}
+    .ctx-pill.active{background:rgba(78,205,164,.2);border-color:var(--accent);color:var(--accent);font-weight:700}
+
+    /* ── AUTOCOMPLETE ── */
+    .ac-wrap{position:relative}
+    .ac-list{position:absolute;top:calc(100% - 14px);left:0;right:0;background:#2a2a2a;border:1px solid rgba(255,255,255,.15);border-top:none;border-radius:0 0 10px 10px;z-index:100;max-height:180px;overflow-y:auto;display:none}
+    .ac-item{padding:10px 14px;cursor:pointer;font-size:14px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .ac-item:last-child{border-bottom:none}
+    .ac-item:active{background:rgba(255,255,255,.07)}
+    .ac-item-row{display:flex;align-items:center;justify-content:space-between}
+    .ac-sub{font-size:11px;color:var(--text3)}
+
+    /* ── HISTORY ── */
+    .hist-panel{background:rgba(78,205,164,.05);border:1px solid rgba(78,205,164,.2);border-radius:10px;padding:12px 14px;margin-top:-8px;margin-bottom:14px;animation:expandIn .2s ease}
+    .hist-title{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:10px}
+    .hist-row{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+    .hist-row:last-child{border-bottom:none}
+    .hist-row.starred{background:rgba(245,197,24,.06);border-radius:6px;padding:7px 6px;margin:0 -6px}
+    .hist-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:3px}
+    .hist-date{font-size:11px;color:var(--text3)}
+
+    /* ── TAGS ── */
+    .tag-preview{display:flex;flex-wrap:wrap;gap:6px;margin:-8px 0 12px}
+    .tag-chip{background:var(--tag-bg);border:1px solid var(--tag-border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--tag-text)}
+
+    /* ── SAVE ── */
+    .save-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:2px;box-shadow:0 4px 20px rgba(78,205,164,.2);transition:transform .15s;-webkit-appearance:none}
+    .save-btn:active{transform:scale(.98)}
+
+    /* ── SEARCH ── */
+    .search-wrap{position:relative;margin-bottom:6px}
+    .search-input{width:100%;background:var(--bg2);border:1px solid rgba(255,255,255,.13);border-radius:12px;padding:13px 42px 13px 18px;color:var(--text);font-size:15px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:0;-webkit-appearance:none}
+    .search-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:16px;pointer-events:none}
+    .search-hint{font-size:12px;color:var(--text3);margin-bottom:16px;padding-left:4px}
+    .search-hint span{color:var(--tag-text)}
+    .section-title{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:14px;font-weight:700}
+
+    /* ── GROUP ── */
+    .group-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden;animation:slideIn .25s ease}
+    .group-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.05)}
+    .group-hdr:active{background:rgba(255,255,255,.03)}
+    .group-name{font-family:'DM Serif Display',serif;font-size:17px;color:#e8e8e8;text-transform:capitalize}
+    .group-meta{font-size:12px;color:var(--text3);margin-top:3px}
+    .group-chevron{color:var(--text3);font-size:13px;transition:transform .2s;flex-shrink:0;margin-left:8px}
+    .group-chevron.open{transform:rotate(180deg)}
+    .group-entries{display:none}.group-entries.open{display:block}
+
+    /* ── ENTRY CARDS ── */
+    .food-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:15px 16px;margin-bottom:10px;animation:slideIn .25s ease;transition:border-color .2s,background .2s}
+    .food-card.starred-card{border-color:rgba(126,200,160,0.6);background:rgba(126,200,160,0.14)}
+    .food-card.editing{background:rgba(78,205,164,.04);border-color:rgba(78,205,164,.3)}
+    .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+    .card-info{flex:1;min-width:0}
+    .food-name{font-family:'DM Serif Display',serif;font-size:17px;color:#e8e8e8;margin-bottom:7px;text-transform:capitalize;word-break:break-word}
+    .pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+    .pill{border-radius:20px;padding:3px 11px;font-size:12px;font-weight:700;color:#fff}
+    .pill-amber{background:var(--pill-amber)}
+    .pill-green{background:var(--pill-green);font-size:14.4px!important}
+    .pill-red{background:var(--pill-red)}
+    .pill-blue{background:rgba(80,140,220,0.75)}
+    .pill-star{background:rgba(126,200,160,0.2);border:1px solid rgba(126,200,160,0.5);border-radius:20px;padding:2px 9px;font-size:11px;color:#7ec8a0;font-weight:700}
+    .card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+    .card-tag{background:var(--tag-bg);border:1px solid var(--tag-border);border-radius:20px;padding:2px 9px;font-size:11px;color:var(--tag-text)}
+    .card-tag.matched{background:rgba(160,110,240,.3);border-color:var(--tag-text)}
+    .card-remarks{font-size:13px;color:var(--text2);margin-top:7px;line-height:1.5;font-style:italic}
+    .card-meta{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
+    .card-time{font-size:11px;color:var(--text3)}
+    .match-note{font-size:11px;color:var(--tag-text)}
+    .card-actions{display:flex;gap:6px;flex-shrink:0}
+    .btn-star{background:none;border:1.5px solid rgba(126,200,160,0.4);border-radius:8px;color:#7ec8a0;padding:7px 10px;cursor:pointer;font-size:14px}
+    .btn-star.on{background:rgba(126,200,160,0.15);border-color:#7ec8a0;color:#7ec8a0}
+    .btn-edit{background:rgba(78,205,164,.1);border:1px solid rgba(78,205,164,.25);border-radius:8px;color:var(--accent);padding:7px 10px;cursor:pointer;font-size:14px}
+    .btn-del{background:var(--red);border:1px solid var(--red-b);border-radius:8px;color:var(--red-t);padding:7px 10px;cursor:pointer;font-size:14px}
+
+    /* ── EDIT FORM ── */
+    .edit-form{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);animation:expandIn .2s ease}
+    .edit-label{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;font-weight:700}
+    .edit-input{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px;-webkit-appearance:none}
+    .edit-input:focus{border-color:rgba(255,255,255,.35)}
+    .edit-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .edit-btns{display:flex;gap:8px;margin-top:4px}
+    .btn-save-edit{flex:1;padding:11px;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:9px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;-webkit-appearance:none}
+    .btn-cancel-edit{flex:1;padding:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:9px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;-webkit-appearance:none}
+    .edit-ctx-pills{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+    .edit-ctx-pill{padding:6px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.04);color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;-webkit-appearance:none}
+    .edit-ctx-pill.active{background:rgba(78,205,164,.2);border-color:var(--accent);color:var(--accent);font-weight:700}
+
+    /* ── MISC ── */
+    .empty{text-align:center;padding:60px 20px;color:var(--text3);font-size:15px;line-height:2}
+    .empty .emoji{font-size:40px;display:block;margin-bottom:12px}
+    #toast{position:fixed;bottom:calc(28px + var(--safe-bot));left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent2);color:#fff;padding:11px 26px;border-radius:30px;font-size:14px;font-family:'DM Sans',sans-serif;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:999;white-space:nowrap}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease}
+    .modal-box{background:#222;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:24px 22px;max-width:300px;width:90%;text-align:center}
+    .modal-msg{font-size:16px;color:var(--text);margin-bottom:20px;line-height:1.5}
+    .modal-btns{display:flex;gap:10px}
+    .modal-cancel{flex:1;padding:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer}
+    .modal-confirm{flex:1;padding:12px;background:var(--red);border:1px solid var(--red-b);border-radius:10px;color:var(--red-t);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
+    /* ── GRAPH TAB ── */
+    .graph-settings-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px}
+    .graph-range-inputs{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:7px 12px}
+    .graph-range-lbl{font-size:11px;color:var(--text3);letter-spacing:.5px}
+    .graph-range-val{width:40px;background:none;border:none;outline:none;color:var(--accent);font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;text-align:center;-webkit-appearance:none}
+    .graph-range-sep{color:var(--text3);font-size:13px}
+    .graph-filter-row{display:flex;gap:6px;margin-bottom:8px;align-items:center}
+    .gf-btn{flex:1;padding:8px 4px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+    .gf-btn.active{background:rgba(78,205,164,.15);border-color:var(--accent);color:var(--accent)}
+    .gf-reset{padding:8px 10px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;white-space:nowrap}
+    .graph-custom-range{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;animation:expandIn .2s ease}
+    .graph-date-input{flex:1;min-width:120px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+    .graph-date-apply{padding:8px 14px;background:rgba(78,205,164,.15);border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer}
+    .graph-wrap{width:100%;overflow:hidden;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative}
+    .graph-wrap canvas{display:block;width:100%;height:220px}
+    .graph-legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 16px;padding:0 2px}
+    .gl-dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .gl-tri{display:inline-block;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid rgba(160,160,180,.7);flex-shrink:0}
+    .gl-band{display:inline-block;width:14px;height:8px;background:rgba(100,160,220,.25);border-radius:2px;flex-shrink:0}
+    .gl-line{display:inline-block;width:14px;height:2px;background:rgba(100,160,220,.8);flex-shrink:0}
+    .gl-lbl{font-size:11px;color:var(--text3)}
+    /* ── GRAPH SUMMARY STRIP ── */
+    .graph-summary{display:grid;grid-template-columns:1.6fr 1px 1fr 1fr 1fr;gap:0;margin-bottom:12px;align-items:center}
+    .gs-val{font-size:17px;font-weight:700;font-family:'DM Sans',sans-serif;line-height:1}
+    .gs-card{background:none;border:none;padding:8px 4px;text-align:center}
+    .gs-lbl{font-size:9px;color:var(--text3);margin-top:4px;letter-spacing:.3px;text-transform:uppercase;line-height:1.3}
+    .gs-val.green{color:#7ec8a0}
+    .gs-val.yellow{color:#e8c174}
+    .gs-val.red{color:#e08080}
+    .gs-val.accent{color:var(--accent)}
+    .tir-bar-wrap{margin:0 0 12px}
+    .tir-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;width:100%}
+    .tir-seg{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:rgba(0,0,0,0.65);min-width:0;overflow:hidden}
+    .agp-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px}
+    .agp-title{font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px}
+    .agp-subtitle{font-size:11px;color:var(--text3);margin-bottom:4px}
+    /* Entry popup on graph tap */
+    #entry-popup{position:fixed;z-index:700;background:rgba(26,26,26,0.60);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:14px 16px;max-width:280px;box-shadow:0 8px 40px rgba(0,0,0,.4);animation:fadeIn .15s ease}
+    .ep-time{font-size:11px;color:rgba(200,200,200,0.9);margin-bottom:6px;font-weight:600}
+    .ep-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+    .ep-food{font-family:'DM Serif Display',serif;font-size:15px;color:var(--text);margin-bottom:4px;text-transform:capitalize}
+    .ep-remarks{font-size:12px;color:var(--text2);font-style:italic;margin-top:4px}
+    .ep-close{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:2px 6px}
+
+    /* ── SETTINGS PANEL ── */
+    .settings-toggle{width:100%;padding:12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-align:left;margin-top:4px;transition:all .2s}
+    .settings-toggle:active{background:rgba(255,255,255,.08)}
+    #settings-panel{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:8px;animation:expandIn .2s ease}
+    .settings-section-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-weight:700;margin-bottom:10px}
+    .settings-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+    .settings-row:last-child{border-bottom:none}
+    .settings-desc{flex:1}
+    .settings-title{font-size:14px;color:var(--text);font-weight:500}
+    .settings-sub{font-size:11px;color:var(--text3);margin-top:2px}
+    .settings-btn{padding:8px 14px;background:rgba(78,205,164,.12);border:1px solid rgba(78,205,164,.3);border-radius:8px;color:var(--accent);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+    .settings-btn-warn{background:rgba(255,140,80,.12);border-color:rgba(255,140,80,.3);color:#ffaa70}
+
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes expandIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  </style>
+</head>
+<body>
+
+<div class="header"><h1>📓 Gluco Diary</h1></div>
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('log')">+ Log</button>
+  <button class="tab-btn" onclick="switchTab('graph')">📈 Graph</button>
+  <button class="tab-btn" onclick="switchTab('entries')">Entries</button>
+  <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
+</div>
+
+<div class="content">
+  <!-- LOG TAB -->
+  <div id="tab-log" class="tab-panel active">
+    <div class="form-card">
+
+      <div class="ts-row">
+        <div>
+          <div class="field-label">Date</div>
+          <div class="ts-field">
+            <input class="ts-seg ts-dd" id="ts-dd" maxlength="2" inputmode="numeric" placeholder="DD"
+              oninput="tsNumeric(this,2,'ts-mon')" onkeydown="tsKey(event,this,null,'ts-mon')"/>
+            <span class="ts-sep">&thinsp;</span>
+            <input class="ts-seg ts-mon" id="ts-mon" readonly placeholder="Mon"
+              onclick="openPicker('ts-mon',MONTHS,this)" onkeydown="tsKey(event,this,'ts-dd','ts-yyyy')"/>
+            <span class="ts-sep">&thinsp;</span>
+            <input class="ts-seg ts-yyyy" id="ts-yyyy" maxlength="4" inputmode="numeric" placeholder="YYYY"
+              oninput="tsNumeric(this,4,null)" onkeydown="tsKey(event,this,'ts-mon',null)"/>
+          </div>
+        </div>
+        <div>
+          <div class="field-label">Time</div>
+          <div class="ts-field">
+            <input class="ts-seg ts-hh" id="ts-hh" maxlength="2" inputmode="numeric" placeholder="HH"
+              oninput="tsNumeric(this,2,'ts-mm')" onkeydown="tsKey(event,this,null,'ts-mm')"/>
+            <span class="ts-sep">:</span>
+            <input class="ts-seg ts-mm" id="ts-mm" maxlength="2" inputmode="numeric" placeholder="MM"
+              oninput="tsNumeric(this,2,'ts-ampm')" onkeydown="tsKey(event,this,'ts-hh','ts-ampm')"/>
+            <span class="ts-sep">&thinsp;</span>
+            <input class="ts-seg ts-ampm" id="ts-ampm" readonly placeholder="AM"
+              onclick="openPicker('ts-ampm',AMPM,this)" onkeydown="tsKey(event,this,'ts-mm',null)"/>
+          </div>
+        </div>
+      </div>
+
+      <hr class="form-divider"/>
+
+      <div class="gluco-event-wrap">
+        <div class="gluco-left">
+          <div class="field-label">Glucose</div>
+          <div class="glucose-hero">
+            <input type="number" step="0.1" id="f-glucose" placeholder="—" inputmode="decimal"/>
+            <div class="glucose-unit">mmol / L</div>
+          </div>
+        </div>
+        <div class="gluco-right">
+          <div class="field-label">Event</div>
+          <div class="ac-wrap">
+            <input type="text" id="f-ctx" autocomplete="off" placeholder="type or pick"
+              oninput="onCtxInput()" onfocus="onCtxInput()" onblur="hideAcDelayed('ctx-ac')" style="margin-bottom:0"/>
+            <div class="ac-list" id="ctx-ac"></div>
+          </div>
+          <div class="ctx-pills">
+            <button class="ctx-pill" onclick="toggleCtx('Pre-meal')">Pre-meal</button>
+            <button class="ctx-pill" onclick="toggleCtx('Post-meal')">Post-meal</button>
+            <button class="ctx-pill" onclick="toggleCtx('Pre-Ex')">Pre-Ex</button>
+            <button class="ctx-pill" onclick="toggleCtx('Post-Ex')">Post-Ex</button>
+          </div>
+        </div>
+      </div>
+
+      <hr class="form-divider"/>
+
+      <div class="section-label">Food</div>
+      <div class="field-label">Food</div>
+      <div class="ac-wrap">
+        <input type="text" id="f-food" autocomplete="off"
+          oninput="onFoodInput()" onfocus="onFoodInput()" onblur="hideAcDelayed('food-ac')"/>
+        <div class="ac-list" id="food-ac"></div>
+      </div>
+      <div id="history-panel"></div>
+      <div class="row2">
+        <div><div class="field-label">Amount</div><input type="text" id="f-amount"/></div>
+        <div><div class="field-label">Insulin (u)</div><input type="text" id="f-insulin"/></div>
+      </div>
+      <div class="field-label">Tags</div>
+      <input type="text" id="f-tags" oninput="updateTagPreview()"/>
+      <div class="tag-preview" id="tag-preview"></div>
+
+      <hr class="form-divider"/>
+      <div class="field-label">Remarks</div>
+      <textarea id="f-remarks" rows="3"></textarea>
+      <button class="save-btn" onclick="addEntry()">Save Entry</button>
+    </div>
+  </div>
+
+  <!-- ENTRIES TAB -->
+  <div id="tab-entries" class="tab-panel">
+    <div class="search-wrap" style="margin-bottom:12px">
+      <input type="text" class="search-input" id="search-input" placeholder="Search food, event, tags, remarks…" oninput="renderEntries()"/>
+      <span class="search-icon">⌕</span>
+    </div>
+    <div id="search-hint" class="search-hint" style="display:none"></div>
+    <div id="entries-results"></div>
+  </div>
+
+  <!-- GRAPH TAB -->
+  <div id="tab-graph" class="tab-panel">
+
+    <!-- FILTER BUTTONS -->
+    <div class="graph-filter-row" style="margin-bottom:6px">
+      <button class="gf-btn" onclick="setGraphFilter('today',this)">Today</button>
+      <button class="gf-btn active" onclick="setGraphFilter('7d',this)">7d</button>
+      <button class="gf-btn" onclick="setGraphFilter('14d',this)">14d</button>
+      <button class="gf-btn" onclick="setGraphFilter('30d',this)">30d</button>
+      <button class="gf-btn" onclick="setGraphFilter('3m',this)">3m</button>
+      <button class="gf-btn" onclick="setGraphFilter('custom',this)">Custom</button>
+      <button class="gf-reset" onclick="resetGraphView()">↺</button>
+    </div>
+    <!-- CUSTOM DATE RANGE -->
+    <div class="graph-custom-range" id="graph-custom-range" style="display:none">
+      <input type="text" id="g-from" placeholder="From: DD Mon YYYY" class="graph-date-input"/>
+      <input type="text" id="g-to" placeholder="To: DD Mon YYYY" class="graph-date-input"/>
+      <button class="graph-date-apply" onclick="applyCustomRange()">Apply</button>
+    </div>
+    <!-- RANGE SETTINGS + HbA1c -->
+    <div class="graph-filter-row" style="margin-bottom:10px">
+      <button class="gf-btn" id="gf-range-btn" onclick="toggleRangePanel()" style="flex:none;padding:8px 12px">⚙ Range</button>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:5px">
+        <span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px">Est. HbA1c</span>
+        <span id="gs-hba1c" style="font-size:15px;font-weight:700;color:var(--accent)">—</span>
+      </div>
+    </div>
+    <div class="graph-custom-range" id="graph-range-panel" style="display:none;align-items:center;gap:8px">
+      <span class="graph-range-lbl" style="color:var(--text2);font-size:12px">Low</span>
+      <input type="number" id="g-low" value="4" step="0.1" class="graph-date-input" style="width:64px;text-align:center" oninput="renderGraph()"/>
+      <span style="color:var(--text3)">–</span>
+      <input type="number" id="g-high" value="10" step="0.1" class="graph-date-input" style="width:64px;text-align:center" oninput="renderGraph()"/>
+      <span class="graph-range-lbl" style="color:var(--text2);font-size:12px">mmol/L</span>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:10px 0 14px"/>
+
+    <!-- SUMMARY STRIP — 4 cards with divider between avg and in range -->
+    <div class="graph-summary" id="graph-summary">
+      <div class="gs-card"><div class="gs-val accent" id="gs-avg">—</div><div class="gs-lbl">Avg mmol/L</div></div>
+      <div style="width:1px;background:var(--border);height:36px;margin:auto"></div>
+      <div class="gs-card"><div class="gs-val green" id="gs-tir">—</div><div class="gs-lbl">In Range</div></div>
+      <div class="gs-card"><div class="gs-val yellow" id="gs-high">—</div><div class="gs-lbl">High</div></div>
+      <div class="gs-card"><div class="gs-val red" id="gs-low">—</div><div class="gs-lbl">Low</div></div>
+    </div>
+    <!-- TIME IN RANGE BAR — no labels, taller, dark text -->
+    <div class="tir-bar-wrap">
+      <div class="tir-bar" id="tir-bar"></div>
+    </div>
+
+    <!-- MAIN GRAPH -->
+    <div class="graph-wrap">
+      <canvas id="graph-canvas"></canvas>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="graph-legend">
+      <span class="gl-dot" style="background:#7ec8a0"></span><span class="gl-lbl">Ideal</span>
+      <span class="gl-dot" style="background:#e8c174"></span><span class="gl-lbl">High</span>
+      <span class="gl-dot" style="background:#e08080"></span><span class="gl-lbl">Low</span>
+      <span class="gl-tri"></span><span class="gl-lbl">Entry (no glucose)</span>
+    </div>
+
+    <!-- AGP SECTION -->
+    <div class="agp-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+        <div>
+          <div class="agp-title">Ambulatory Glucose Profile</div>
+          <div class="agp-subtitle">All readings overlaid by time of day</div>
+        </div>
+        <button class="gf-reset" onclick="resetAgpView()" style="font-size:11px">↺</button>
+      </div>
+      <div class="graph-wrap" style="margin-top:10px">
+        <canvas id="agp-canvas"></canvas>
+      </div>
+      <div class="graph-legend" style="margin-top:8px">
+        <span class="gl-band"></span><span class="gl-lbl">25–75th percentile</span>
+        <span class="gl-line"></span><span class="gl-lbl">Median</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENTRY POPUP (graph tap) -->
+  <div id="entry-popup" style="display:none"></div>
+
+  <!-- SETTINGS TAB -->
+  <div id="tab-settings" class="tab-panel">
+    <div class="form-card">
+      <div class="settings-section-lbl">Profile</div>
+      <div class="settings-row">
+        <div class="settings-desc">
+          <div class="settings-title">Patient Name</div>
+          <div class="settings-sub">Shown on PDF report</div>
+        </div>
+        <input type="text" id="patient-name" placeholder="Your name" style="width:130px;padding:7px 10px;font-size:13px;margin-bottom:0;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none" oninput="localStorage.setItem('gd-patient',this.value)"/>
+      </div>
+      <div class="settings-section-lbl" style="margin-top:18px">Backup & Export</div>
+      <div class="settings-row">
+        <div class="settings-desc">
+          <div class="settings-title">Export JSON</div>
+          <div class="settings-sub">Full backup — can be imported back</div>
+        </div>
+        <button class="settings-btn" onclick="exportJSON()">Export</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-desc">
+          <div class="settings-title">Export PDF</div>
+          <div class="settings-sub">Medical-style report for doctor</div>
+        </div>
+        <button class="settings-btn" onclick="exportPDF()">Export</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-desc">
+          <div class="settings-title">Import JSON</div>
+          <div class="settings-sub">Restore from a previous backup</div>
+        </div>
+        <button class="settings-btn" onclick="document.getElementById('import-file').click()">Import</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)"/>
+      </div>
+      <div class="settings-section-lbl" style="margin-top:18px">Auto Backup</div>
+      <div class="settings-row">
+        <div class="settings-desc">
+          <div class="settings-title">Last backup</div>
+          <div class="settings-sub" id="backup-status">Checking…</div>
+        </div>
+        <button class="settings-btn" onclick="manualBackup()">Backup now</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-desc">
+          <div class="settings-title">Restore from backup</div>
+          <div class="settings-sub">Recover if main data is lost</div>
+        </div>
+        <button class="settings-btn settings-btn-warn" onclick="restoreBackup()">Restore</button>
+      </div>
+      <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <button onclick="seedSampleData()" style="background:none;border:none;color:var(--text3);font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;text-decoration:underline">Add sample data for testing</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALL TAB (internal, hidden) -->
+  <div id="tab-all" class="tab-panel">
+    <div id="all-results"></div>
+  </div>
+</div>
+
+<!-- PICKER POPUP -->
+<div class="picker-popup" id="picker-popup">
+  <div style="position:relative">
+    <div class="picker-list" id="picker-list"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="modal-overlay" style="display:none;position:fixed;inset:0;z-index:600;"></div>
+
+<script>
+const STORAGE_KEY='gluco-diary-v1';
+let entries=[],starMap={},editingId=null,selectedFood=null;
+const CTX_OPTIONS=['Pre-meal','Post-meal','Pre-Ex','Post-Ex'];
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const AMPM=['AM','PM'];
+
+// ── DATA ──
+function loadData(){
+  try{
+    const r=localStorage.getItem(STORAGE_KEY);
+    if(r){const p=JSON.parse(r);entries=p.entries||[];starMap=p.starMap||{};}
+    if(!entries.length){
+      const old=localStorage.getItem('insulin-tracker-v1');
+      if(old){const p=JSON.parse(old);entries=p.entries||[];starMap=p.starMap||{};saveData();}
+    }
+  }catch{entries=[];starMap={};}
+}
+function saveData(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify({entries,starMap}));}catch{}
+  autoBackup();
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  const idx=['log','graph','entries','settings'].indexOf(name);
+  if(idx>=0) document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+  if(name==='entries')renderEntries();
+  if(name==='graph'){setTimeout(()=>{initGraphInteraction();initAgpInteraction();renderGraph();},50);}
+  if(name==='settings'){
+    updateBackupStatus();
+    const pname=localStorage.getItem('gd-patient')||'';
+    const ni=document.getElementById('patient-name');
+    if(ni)ni.value=pname;
+  }
+}
+function parseTags(s){return s?s.split(',').map(t=>t.trim().toLowerCase()).filter(Boolean):[];}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmt12h(h){
+  // Convert 24h integer to 12h label e.g. 0→12am, 9→9am, 12→12pm, 21→9pm
+  if(h===0)return '12am';
+  if(h===12)return '12pm';
+  return h<12?h+'am':(h-12)+'pm';
+}
+function updateTagPreview(){
+  const tags=parseTags(document.getElementById('f-tags').value);
+  document.getElementById('tag-preview').innerHTML=tags.map(t=>`<span class="tag-chip">#${t}</span>`).join('');
+}
+
+// ── PICKER ──
+let pickerTarget=null,pickerItems=[],pickerScrollTimer=null;
+
+function openPicker(targetId,items,anchorEl){
+  pickerTarget=targetId;
+  pickerItems=items;
+  const popup=document.getElementById('picker-popup');
+  const list=document.getElementById('picker-list');
+  const currentVal=document.getElementById(targetId).value;
+  const currentIdx=Math.max(0,items.indexOf(currentVal));
+
+  // No padding — exact item count, no empty scroll space
+  list.innerHTML=items.map((v,i)=>
+    `<div class="picker-item${i===currentIdx?' selected':''}" data-idx="${i}" data-val="${v}"
+      ontouchstart="this.classList.add('tap-highlight')"
+      ontouchend="this.classList.remove('tap-highlight')"
+      onclick="pickItem('${v}')">${v}</div>`
+  ).join('');
+
+  // Same box size for all pickers
+  const itemH=54;
+  // AM/PM: padding 20% less, height = 1 full + 60% = 1.6 items
+  // Months: original padding, height = 5 items
+  const padH=items.length<=2 ? Math.floor(itemH*0.7) : Math.floor(itemH*0.9);
+  const listH=items.length<=2 ? Math.floor(itemH*1.6) : Math.min(items.length,5)*itemH;
+  list.style.height=listH+'px';
+  list.style.overflowY='scroll';
+  list.style.paddingTop=padH+'px';
+  list.style.paddingBottom=padH+'px';
+
+  // Position popup near anchor — same width for all pickers
+  const rect=anchorEl.getBoundingClientRect();
+  const pw=140;
+  popup.style.width=pw+'px';
+  let top=rect.bottom+6;
+  let left=rect.left+rect.width/2-pw/2;
+  if(left<8)left=8;
+  if(left+pw>window.innerWidth-8)left=window.innerWidth-pw-8;
+  if(top+listH+padH*2+12>window.innerHeight)top=rect.top-listH-padH*2-6;
+  popup.style.top=top+'px';
+  popup.style.left=left+'px';
+  popup.classList.add('show');
+
+  // Set scroll without triggering highlight jump:
+  // suppress handler, set position, re-enable after settled
+  let scrollReady=false;
+  list.onscroll=()=>{
+    if(!scrollReady)return;
+    clearTimeout(pickerScrollTimer);
+    pickerScrollTimer=setTimeout(()=>{
+      // Account for padding: item idx = (scrollTop - padH) / itemH
+      const idx=Math.max(0,Math.min(items.length-1,Math.round((list.scrollTop-padH)/itemH)));
+      highlightPickerItem(idx);
+    },80);
+  };
+
+  // scrollTop = padH + idx*itemH → selected item sits at top of visible area, next peeks below
+  setTimeout(()=>{
+    list.scrollTop=padH+(currentIdx*itemH);
+    setTimeout(()=>{ scrollReady=true; },100);
+  },30);
+
+  // Backdrop: blocks page scroll, closes only on tap OUTSIDE picker (touchend, not touchstart)
+  let backdrop=document.getElementById('picker-backdrop');
+  if(!backdrop){
+    backdrop=document.createElement('div');
+    backdrop.id='picker-backdrop';
+    backdrop.style.cssText='position:fixed;inset:0;z-index:299;background:transparent;';
+    document.body.appendChild(backdrop);
+  }
+  backdrop.style.display='block';
+  // Block page scroll
+  backdrop._moveHandler=(e)=>{
+    if(document.getElementById('modal-overlay').style.display!=='none')return;
+    e.preventDefault();
+  };
+  backdrop.addEventListener('touchmove',backdrop._moveHandler,{passive:false});
+  // Close only on touchend outside popup
+  backdrop._endHandler=(e)=>{
+    // Don't close picker if confirm modal is open
+    if(document.getElementById('modal-overlay').style.display!=='none')return;
+    const pop=document.getElementById('picker-popup');
+    if(!pop.contains(e.target)){closePicker();}
+  };
+  backdrop.addEventListener('touchend',backdrop._endHandler);
+  backdrop.onclick=(e)=>{
+    const pop=document.getElementById('picker-popup');
+    if(!pop.contains(e.target))closePicker();
+  };
+}
+
+function highlightPickerItem(idx){
+  document.querySelectorAll('#picker-list .picker-item[data-val]').forEach((el,i)=>{
+    el.classList.toggle('selected',i===idx);
+  });
+}
+
+function pickItem(val){
+  if(pickerTarget){
+    document.getElementById(pickerTarget).value=val;
+    if(pickerTarget==='ts-ampm') document.getElementById('ts-ampm').style.color='var(--accent)';
+    if(pickerTarget==='ts-mon') setTimeout(()=>document.getElementById('ts-yyyy').focus(),300);
+  }
+  // Highlight selected item visually, then close after short delay
+  document.querySelectorAll('#picker-list .picker-item').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.val===val);
+  });
+  setTimeout(()=>closePicker(), 500);
+}
+
+function closePicker(e){
+  document.getElementById('picker-popup').classList.remove('show');
+  const backdrop=document.getElementById('picker-backdrop');
+  if(backdrop){
+    backdrop.style.display='none';
+    if(backdrop._moveHandler){backdrop.removeEventListener('touchmove',backdrop._moveHandler,{passive:false});backdrop._moveHandler=null;}
+    if(backdrop._endHandler){backdrop.removeEventListener('touchend',backdrop._endHandler);backdrop._endHandler=null;}
+  }
+  pickerTarget=null;
+}
+
+// ── MASKED TIMESTAMP ──
+function tsNumeric(el,maxLen,nextId){
+  el.value=el.value.replace(/\D/g,'');
+  if(el.value.length>=maxLen&&nextId){
+    const next=document.getElementById(nextId);
+    if(next.readOnly) openPicker(nextId,nextId==='ts-ampm'?AMPM:MONTHS,next);
+    else next.focus();
+  }
+}
+function tsKey(event,el,prevId,nextId){
+  if(event.key==='Backspace'&&el.value===''&&prevId) document.getElementById(prevId).focus();
+  if(event.key==='ArrowRight'&&el.selectionStart===el.value.length&&nextId) document.getElementById(nextId).focus();
+  if(event.key==='ArrowLeft'&&el.selectionStart===0&&prevId) document.getElementById(prevId).focus();
+}
+
+function initTimestamp(){
+  const now=new Date();
+  document.getElementById('ts-dd').value=String(now.getDate()).padStart(2,'0');
+  document.getElementById('ts-mon').value=MONTHS[now.getMonth()];
+  document.getElementById('ts-yyyy').value=String(now.getFullYear());
+  const h=now.getHours();
+  document.getElementById('ts-hh').value=String(h%12||12).padStart(2,'0');
+  document.getElementById('ts-mm').value=String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('ts-ampm').value=h>=12?'PM':'AM';
+}
+function getTimestamp(){
+  return{
+    date:`${document.getElementById('ts-dd').value.trim()} ${document.getElementById('ts-mon').value.trim()} ${document.getElementById('ts-yyyy').value.trim()}`,
+    time:`${document.getElementById('ts-hh').value.trim()}:${document.getElementById('ts-mm').value.trim()} ${document.getElementById('ts-ampm').value.trim()}`
+  };
+}
+function formatDateTime(e){return e.time?`${e.date} · ${e.time}`:e.date;}
+
+// edit-form picker helpers (per entry)
+function openEditPicker(targetId,items,anchorEl){
+  openPicker(targetId,items,anchorEl);
+}
+
+// ── CONTEXT / EVENT ──
+let activeCtx=null;
+function toggleCtx(val){
+  activeCtx=activeCtx===val?null:val;
+  document.querySelectorAll('.ctx-pill').forEach(b=>b.classList.toggle('active',b.textContent===activeCtx));
+  if(activeCtx){document.getElementById('f-ctx').value=activeCtx;document.getElementById('ctx-ac').style.display='none';}
+  else document.getElementById('f-ctx').value='';
+}
+function resetCtx(){activeCtx=null;document.querySelectorAll('.ctx-pill').forEach(b=>b.classList.remove('active'));}
+
+function getUniqueContexts(){
+  const seen=new Set(CTX_OPTIONS);
+  entries.forEach(e=>{if(e.context&&!seen.has(e.context))seen.add(e.context);});
+  return Array.from(seen);
+}
+function onCtxInput(){
+  const val=document.getElementById('f-ctx').value;
+  if(activeCtx&&val!==activeCtx){activeCtx=null;document.querySelectorAll('.ctx-pill').forEach(b=>b.classList.remove('active'));}
+  const lower=val.trim().toLowerCase();
+  const matches=getUniqueContexts().filter(c=>!lower||c.toLowerCase().includes(lower)).slice(0,6);
+  const el=document.getElementById('ctx-ac');
+  if(!matches.length||!val.trim()){el.style.display='none';return;}
+  el.innerHTML=matches.map(c=>`<div class="ac-item" onmousedown="selectCtx('${esc(c)}')">${esc(c)}</div>`).join('');
+  el.style.display='block';
+}
+function selectCtx(val){
+  document.getElementById('f-ctx').value=val;
+  document.getElementById('ctx-ac').style.display='none';
+  activeCtx=CTX_OPTIONS.includes(val)?val:null;
+  document.querySelectorAll('.ctx-pill').forEach(b=>b.classList.toggle('active',b.textContent===activeCtx));
+}
+
+// ── FOOD AUTOCOMPLETE ──
+function getUniqueFoods(){
+  const seen=new Set(),res=[];
+  entries.forEach(e=>{if(!e.food)return;const k=e.food.toLowerCase();if(!seen.has(k)){seen.add(k);res.push(e.food);}});
+  return res;
+}
+function onFoodInput(){
+  const val=document.getElementById('f-food').value;
+  if(selectedFood&&val.toLowerCase()!==selectedFood.toLowerCase()){selectedFood=null;document.getElementById('history-panel').innerHTML='';}
+  const lower=val.trim().toLowerCase();
+  const matches=getUniqueFoods().filter(n=>!lower||n.toLowerCase().includes(lower)).slice(0,8);
+  const el=document.getElementById('food-ac');
+  if(!matches.length){el.style.display='none';return;}
+  el.innerHTML=matches.map(n=>{
+    const cnt=entries.filter(e=>e.food&&e.food.toLowerCase()===n.toLowerCase()).length;
+    const hasStar=starMap[n.toLowerCase()]!=null;
+    return`<div class="ac-item" onmousedown="selectFood('${esc(n)}')">`+
+      `<div class="ac-item-row"><span>${esc(n)}${hasStar?' ⭐':''}</span><span class="ac-sub">${cnt}×</span></div></div>`;
+  }).join('');
+  el.style.display='block';
+}
+function hideAcDelayed(id){setTimeout(()=>{const el=document.getElementById(id);if(el)el.style.display='none';},200);}
+function selectFood(name){
+  document.getElementById('f-food').value=name;
+  document.getElementById('food-ac').style.display='none';
+  selectedFood=name;showHistoryPanel(name);
+}
+function showHistoryPanel(name){
+  const lower=name.toLowerCase();
+  const fe=entries.filter(e=>e.food&&e.food.toLowerCase()===lower);
+  if(!fe.length){document.getElementById('history-panel').innerHTML='';return;}
+  const starredId=starMap[lower];
+  const sorted=[...fe].sort((a,b)=>a.id===starredId?-1:b.id===starredId?1:b.id-a.id);
+  document.getElementById('history-panel').innerHTML=`<div class="hist-panel">
+    <div class="hist-title">Past — ${esc(name)}</div>
+    ${sorted.map(e=>{const isStar=e.id===starredId;return`<div class="hist-row${isStar?' starred':''}">
+      <div class="hist-pills">
+        ${isStar?'<span style="font-size:11px;color:#7ec8a0;font-weight:700">★&nbsp;</span>':''}
+        ${e.amount?`<span class="pill pill-amber" style="font-size:11px">📏 ${esc(e.amount)}</span>`:''}
+        ${e.insulin?`<span class="pill pill-green" style="font-size:11px">💉 ${esc(e.insulin)}u</span>`:''}
+      </div>
+      <div class="hist-date">${formatDateTime(e)}${e.remarks?' · '+esc(e.remarks.substring(0,40)):''}</div>
+    </div>`;}).join('')}
+  </div>`;
+}
+
+// ── ADD ENTRY ──
+function addEntry(){
+  const{date,time}=getTimestamp();
+  const glucose=document.getElementById('f-glucose').value.trim();
+  const context=document.getElementById('f-ctx').value.trim()||null;
+  const food=document.getElementById('f-food').value.trim();
+  const amount=document.getElementById('f-amount').value.trim();
+  const insulin=document.getElementById('f-insulin').value.trim();
+  const tags=parseTags(document.getElementById('f-tags').value);
+  const remarks=document.getElementById('f-remarks').value.trim();
+  if(!glucose&&!food&&!context&&!remarks){showToast('Add at least one field');return;}
+  entries.unshift({id:Date.now(),date,time,glucose:glucose!==''?parseFloat(glucose):null,
+    context,food:food||null,amount:amount||null,insulin:insulin||null,tags,remarks:remarks||null});
+  saveData();
+  ['f-glucose','f-food','f-amount','f-insulin','f-tags','f-remarks'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-ctx').value='';
+  document.getElementById('tag-preview').innerHTML='';
+  document.getElementById('history-panel').innerHTML='';
+  document.getElementById('food-ac').style.display='none';
+  document.getElementById('ctx-ac').style.display='none';
+  resetCtx();selectedFood=null;initTimestamp();
+  updateAllTabCount();showToast('✓ Saved!');switchTab('entries');
+}
+
+// ── STAR ──
+function toggleStar(id,foodKey,event){
+  event.stopPropagation();
+  if(starMap[foodKey]===id){delete starMap[foodKey];showToast('Star removed');}
+  else{starMap[foodKey]=id;showToast('★ Marked as optimal');}
+  saveData();renderAll();renderSearch();
+}
+
+// ── DELETE ──
+function deleteEntry(id,event){
+  if(event)event.stopPropagation();
+  showConfirm('Delete this entry?',()=>{
+    const e=entries.find(x=>x.id===id);
+    if(e&&e.food&&starMap[e.food.toLowerCase()]===id)delete starMap[e.food.toLowerCase()];
+    entries=entries.filter(x=>x.id!==id);
+    saveData();updateAllTabCount();renderAll();renderSearch();showToast('Removed');
+  });
+}
+
+// ── EDIT ──
+function startEdit(id,event){if(event)event.stopPropagation();editingId=id;renderAll();renderSearch();}
+function cancelEdit(event){if(event)event.stopPropagation();editingId=null;renderAll();renderSearch();}
+
+function toggleEditCtx(entryId,val){
+  const input=document.getElementById('edit-ctx-'+entryId);
+  const pills=document.querySelectorAll(`.edit-ctx-pill[data-eid="${entryId}"]`);
+  const already=input.value===val;
+  pills.forEach(p=>p.classList.remove('active'));
+  input.value=already?'':val;
+  if(!already)pills.forEach(p=>{if(p.textContent===val)p.classList.add('active');});
+}
+function onEditCtxInput(eid){
+  const val=document.getElementById('edit-ctx-'+eid).value;
+  const lower=val.trim().toLowerCase();
+  const matches=getUniqueContexts().filter(c=>!lower||c.toLowerCase().includes(lower)).slice(0,6);
+  const el=document.getElementById('edit-ctx-ac-'+eid);if(!el)return;
+  if(!matches.length||!val.trim()){el.style.display='none';return;}
+  el.innerHTML=matches.map(c=>`<div class="ac-item" onmousedown="selectEditCtx(${eid},'${esc(c)}')">${esc(c)}</div>`).join('');
+  el.style.display='block';
+  document.querySelectorAll(`.edit-ctx-pill[data-eid="${eid}"]`).forEach(p=>p.classList.toggle('active',p.textContent===val));
+}
+function selectEditCtx(eid,val){
+  document.getElementById('edit-ctx-'+eid).value=val;
+  const el=document.getElementById('edit-ctx-ac-'+eid);if(el)el.style.display='none';
+  document.querySelectorAll(`.edit-ctx-pill[data-eid="${eid}"]`).forEach(p=>p.classList.toggle('active',p.textContent===val));
+}
+
+function saveEdit(id){
+  const dd=document.getElementById(`ets-${id}-dd`).value.trim();
+  const mon=document.getElementById(`ets-${id}-mon`).value.trim();
+  const yyyy=document.getElementById(`ets-${id}-yyyy`).value.trim();
+  const hh=document.getElementById(`ets-${id}-hh`).value.trim();
+  const mm=document.getElementById(`ets-${id}-mm`).value.trim();
+  const ampm=document.getElementById(`ets-${id}-ampm`).value.trim();
+  const date=`${dd} ${mon} ${yyyy}`;
+  const time=`${hh}:${mm} ${ampm}`;
+  const glucoseVal=document.getElementById('edit-glucose-'+id).value.trim();
+  const context=document.getElementById('edit-ctx-'+id).value.trim()||null;
+  const food=document.getElementById('edit-food-'+id).value.trim();
+  const amount=document.getElementById('edit-amount-'+id).value.trim();
+  const insulin=document.getElementById('edit-insulin-'+id).value.trim();
+  const tags=parseTags(document.getElementById('edit-tags-'+id).value);
+  const remarks=document.getElementById('edit-remarks-'+id).value.trim();
+  const old=entries.find(e=>e.id===id);
+  if(old&&old.food&&food&&old.food.toLowerCase()!==food.toLowerCase()&&starMap[old.food.toLowerCase()]===id){
+    delete starMap[old.food.toLowerCase()];starMap[food.toLowerCase()]=id;
+  }
+  entries=entries.map(e=>e.id===id?{...e,date,time,glucose:glucoseVal!==''?parseFloat(glucoseVal):null,
+    context,food:food||null,amount:amount||null,insulin:insulin||null,tags,remarks:remarks||null}:e);
+  saveData();editingId=null;updateAllTabCount();renderAll();renderSearch();showToast('✓ Updated!');
+}
+
+// ── RENDER CARD ──
+function editTsField(id,date,time){
+  const dp=(date||'').split(' ');
+  const tp=(time||'').split(/[: ]/);
+  const p=`ets-${id}-`;
+  return`
+  <div class="edit-ts-row">
+    <div>
+      <label class="edit-label">Date</label>
+      <div class="edit-ts-field">
+        <input class="edit-ts-seg edit-ts-dd" id="${p}dd" maxlength="2" inputmode="numeric" value="${esc(dp[0]||'')}"
+          oninput="tsNumeric(this,2,'${p}mon')" onkeydown="tsKey(event,this,null,'${p}mon')"/>
+        <span class="edit-ts-sep">&thinsp;</span>
+        <input class="edit-ts-seg edit-ts-mon" id="${p}mon" readonly value="${esc(dp[1]||'')}"
+          onclick="openPicker('${p}mon',MONTHS,this)" onkeydown="tsKey(event,this,'${p}dd','${p}yyyy')"/>
+        <span class="edit-ts-sep">&thinsp;</span>
+        <input class="edit-ts-seg edit-ts-yyyy" id="${p}yyyy" maxlength="4" inputmode="numeric" value="${esc(dp[2]||'')}"
+          oninput="tsNumeric(this,4,null)" onkeydown="tsKey(event,this,'${p}mon',null)"/>
+      </div>
+    </div>
+    <div>
+      <label class="edit-label">Time</label>
+      <div class="edit-ts-field">
+        <input class="edit-ts-seg edit-ts-hh" id="${p}hh" maxlength="2" inputmode="numeric" value="${esc(tp[0]||'')}"
+          oninput="tsNumeric(this,2,'${p}mm')" onkeydown="tsKey(event,this,null,'${p}mm')"/>
+        <span class="edit-ts-sep">:</span>
+        <input class="edit-ts-seg edit-ts-mm" id="${p}mm" maxlength="2" inputmode="numeric" value="${esc(tp[1]||'')}"
+          oninput="tsNumeric(this,2,'${p}ampm')" onkeydown="tsKey(event,this,'${p}hh','${p}ampm')"/>
+        <span class="edit-ts-sep">&thinsp;</span>
+        <input class="edit-ts-seg edit-ts-ampm" id="${p}ampm" readonly value="${esc(tp[2]||'')}"
+          onclick="openPicker('${p}ampm',AMPM,this)" onkeydown="tsKey(event,this,'${p}mm',null)"/>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCard(entry,query){
+  const isEditing=editingId===entry.id;
+  const q=(query||'').toLowerCase();
+  const matchedTag=q?(entry.tags||[]).find(t=>t.includes(q)):null;
+  const nameMatch=q&&entry.food&&entry.food.toLowerCase().includes(q);
+  const isStarred=entry.food&&starMap[entry.food.toLowerCase()]===entry.id;
+  const currentCtx=entry.context||'';
+
+  const pillsHTML=[
+    isStarred?`<span class="pill-star">★ Optimal</span>`:'',
+    entry.glucose!=null?`<span class="pill pill-red">🩸 ${entry.glucose} mmol</span>`:'',
+    entry.context?`<span class="pill pill-blue">${esc(entry.context)}</span>`:'',
+    entry.amount?`<span class="pill pill-amber">📏 ${esc(entry.amount)}</span>`:'',
+    entry.insulin?`<span class="pill pill-green">💉 ${esc(entry.insulin)}u</span>`:'',
+  ].join('');
+
+  const tagsHTML=(entry.tags||[]).length
+    ?`<div class="card-tags">${entry.tags.map(t=>`<span class="card-tag${t===matchedTag?' matched':''}">#${t}</span>`).join('')}</div>`:'';
+
+  const editCtxPills=CTX_OPTIONS.map(o=>
+    `<button class="edit-ctx-pill${currentCtx===o?' active':''}" data-eid="${entry.id}" onclick="toggleEditCtx(${entry.id},'${o}')">${o}</button>`
+  ).join('');
+
+  const editFormHTML=isEditing?`
+    <div class="edit-form">
+      ${editTsField(entry.id,entry.date,entry.time)}
+      <div class="gluco-event-row" style="margin-bottom:10px">
+        <div class="glucose-hero" style="border-color:rgba(255,255,255,.13);min-height:60px">
+          <input class="edit-input" type="number" step="0.1" id="edit-glucose-${entry.id}" value="${entry.glucose!=null?entry.glucose:''}" style="font-size:26px;font-weight:700;padding:0;background:none;border:none;margin-bottom:0;width:100%" placeholder="—"/>
+          <div class="glucose-unit">mmol / L</div>
+        </div>
+        <div class="event-col">
+          <label class="edit-label">Event</label>
+          <div class="ac-wrap">
+            <input class="edit-input" type="text" id="edit-ctx-${entry.id}" value="${esc(currentCtx)}"
+              oninput="onEditCtxInput(${entry.id})" onblur="hideAcDelayed('edit-ctx-ac-${entry.id}')" style="margin-bottom:0"/>
+            <div class="ac-list" id="edit-ctx-ac-${entry.id}"></div>
+          </div>
+        </div>
+      </div>
+      <div class="edit-ctx-pills">${editCtxPills}</div>
+      <label class="edit-label">Food Name</label>
+      <input class="edit-input" type="text" id="edit-food-${entry.id}" value="${esc(entry.food||'')}"/>
+      <div class="edit-row2">
+        <div><label class="edit-label">Amount</label><input class="edit-input" type="text" id="edit-amount-${entry.id}" value="${esc(entry.amount||'')}"/></div>
+        <div><label class="edit-label">Insulin (u)</label><input class="edit-input" type="text" id="edit-insulin-${entry.id}" value="${esc(entry.insulin||'')}"/></div>
+      </div>
+      <label class="edit-label">Tags</label>
+      <input class="edit-input" type="text" id="edit-tags-${entry.id}" value="${esc((entry.tags||[]).join(', '))}"/>
+      <label class="edit-label">Remarks</label>
+      <textarea class="edit-input" id="edit-remarks-${entry.id}" rows="3" style="resize:none;line-height:1.5">${esc(entry.remarks||'')}</textarea>
+      <div class="edit-btns">
+        <button class="btn-save-edit" onclick="saveEdit(${entry.id})">Save Changes</button>
+        <button class="btn-cancel-edit" onclick="cancelEdit(event)">Cancel</button>
+      </div>
+    </div>`:'';
+
+  const starBtn=entry.food?`<button class="btn-star${isStarred?' on':''}" onclick="toggleStar(${entry.id},'${esc((entry.food||'').toLowerCase())}',event)">${isStarred?'★':'☆'}</button>`:'';
+
+  return`<div class="food-card${isStarred?' starred-card':''}${isEditing?' editing':''}">
+    <div class="card-top">
+      <div class="card-info">
+        ${entry.food?`<div class="food-name">${esc(entry.food)}</div>`:''}
+        <div class="pills">${pillsHTML}</div>
+        ${tagsHTML}
+        ${entry.remarks?`<div class="card-remarks">${esc(entry.remarks)}</div>`:''}
+        <div class="card-meta">
+          <span class="card-time">${formatDateTime(entry)}</span>
+          ${(!nameMatch&&matchedTag)?`<span class="match-note">↑ matched tag</span>`:''}
+        </div>
+      </div>
+      <div class="card-actions">
+        ${starBtn}
+        <button class="btn-edit" onclick="${isEditing?'cancelEdit(event)':'startEdit('+entry.id+',event)'}">${isEditing?'✕':'✏️'}</button>
+        <button class="btn-del" onclick="deleteEntry(${entry.id},event)">🗑</button>
+      </div>
+    </div>
+    ${editFormHTML}
+  </div>`;
+}
+
+// ── RENDER SEARCH ──
+// ── RENDER ENTRIES (merged search + all, chronological) ──
+function renderEntries(){
+  const q=(document.getElementById('search-input')?.value||'').trim();
+  const hint=document.getElementById('search-hint');
+  const results=document.getElementById('entries-results');
+  if(!results)return;
+  const ql=q.toLowerCase();
+
+  let filtered=entries.filter(e=>
+    !q||
+    (e.food&&e.food.toLowerCase().includes(ql))||
+    (e.tags||[]).some(t=>t.includes(ql))||
+    (e.context&&e.context.toLowerCase().includes(ql))||
+    (e.remarks&&e.remarks.toLowerCase().includes(ql))
+  );
+
+  if(q){
+    hint.style.display='block';
+    hint.innerHTML=`${filtered.length} result${filtered.length!==1?'s':''} for "${esc(q)}" <span>· food, tags, event, remarks</span>`;
+    // When searching: starred entry for matching food floats to top, then rest by latest
+    filtered=[...filtered].sort((a,b)=>{
+      const aStarred=a.food&&starMap[a.food.toLowerCase()]===a.id?1:0;
+      const bStarred=b.food&&starMap[b.food.toLowerCase()]===b.id?1:0;
+      if(bStarred!==aStarred)return bStarred-aStarred;
+      return b.id-a.id; // latest first
+    });
+  } else {
+    hint.style.display='none';
+    // No search — pure chronological (entries already sorted newest first)
+  }
+
+  if(!filtered.length){
+    results.innerHTML=`<div class="empty"><span class="emoji">${entries.length?'🔍':'📓'}</span>${entries.length?'Nothing found':'No entries yet.<br>Log your first entry!'}</div>`;
+    return;
+  }
+  results.innerHTML=filtered.map(e=>renderCard(e,q)).join('');
+}
+
+// keep renderAll/renderSearch as aliases for internal calls
+function renderAll(){renderEntries();}
+function renderSearch(){renderEntries();}
+function updateAllTabCount(){} // no longer needed
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2200);}
+
+// ── CONFIRM ──
+function showConfirm(msg,onConfirm){
+  // Hide picker backdrop so it doesn't block modal taps
+  const backdrop=document.getElementById('picker-backdrop');
+  if(backdrop)backdrop.style.display='none';
+  const overlay=document.getElementById('modal-overlay');
+  overlay.style.zIndex='500';
+  overlay.innerHTML=`<div class="modal-overlay" onclick="closeConfirm()"><div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-msg">${msg}</div><div class="modal-btns">
+    <button class="modal-cancel" onclick="closeConfirm()">Cancel</button>
+    <button class="modal-confirm" onclick="confirmAction()">Delete</button></div></div></div>`;
+  overlay.style.display='block';window._confirmCb=onConfirm;
+}
+function closeConfirm(){
+  document.getElementById('modal-overlay').style.display='none';
+  window._confirmCb=null;
+}
+function confirmAction(){
+  const cb=window._confirmCb;
+  closeConfirm();
+  if(cb)cb();
+}
+
+// ══════════════════════════════════════════════
+// ── GRAPH ──
+// ══════════════════════════════════════════════
+let gFilter='7d';
+let gCustomFrom=null,gCustomTo=null;
+let gZoom={scaleX:1,offsetX:0};
+let gPinch={active:false,startDist:0,startScale:1,startMidX:0};
+let gDrag={active:false,startX:0,startOX:0};
+let gHitTargets=[];
+let gSelectedEntry=null;
+
+// AGP zoom state
+let agpZoom={scaleX:1,offsetX:0};
+let agpPinch={active:false,startDist:0,startScale:1,startMidX:0};
+let agpDrag={active:false,startX:0,startOX:0};
+
+function toggleRangePanel(){
+  const p=document.getElementById('graph-range-panel');
+  const btn=document.getElementById('gf-range-btn');
+  const open=p.style.display==='none';
+  p.style.display=open?'flex':'none';
+  btn.classList.toggle('active',open);
+}
+function resetAgpView(){agpZoom={scaleX:1,offsetX:0};renderAGP();}
+
+const C = {
+  GREEN:  '#7ec8a0',
+  YELLOW: '#e8c174',
+  RED:    '#e08080',
+  GREEN_BG:  'rgba(126,200,160,0.12)',
+  YELLOW_BG: 'rgba(232,193,116,0.12)',
+  RED_BG:    'rgba(224,128,128,0.12)',
+  RANGE_BG:  'rgba(126,200,160,0.10)',
+  LINE:      'rgba(100,160,220,0.85)',
+  AGP_BAND:  'rgba(100,160,220,0.18)',
+  AGP_LINE:  'rgba(100,160,220,0.85)',
+  GRID:      'rgba(255,255,255,0.06)',
+  AXIS:      'rgba(255,255,255,0.25)',
+  TEXT:      'rgba(200,200,200,0.7)',
+  TRI:       'rgba(160,160,190,0.7)',
+  TRI_OUT:   'rgba(160,160,190,0.9)',
+  BG:        '#1a1a1a',
+};
+
+function graphLow(){return parseFloat(document.getElementById('g-low').value)||4;}
+function graphHigh(){return parseFloat(document.getElementById('g-high').value)||10;}
+
+function setGraphFilter(f,btn){
+  gFilter=f;
+  document.querySelectorAll('.gf-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('graph-custom-range').style.display=f==='custom'?'flex':'none';
+  if(f!=='custom'){gZoom={scaleX:1,offsetX:0};renderGraph();}
+}
+
+function applyCustomRange(){
+  const fromStr=document.getElementById('g-from').value.trim();
+  const toStr=document.getElementById('g-to').value.trim();
+  const parseDate=s=>{const d=new Date(s);return isNaN(d)?null:d;};
+  gCustomFrom=parseDate(fromStr);
+  gCustomTo=parseDate(toStr);
+  if(gCustomFrom&&gCustomTo){gZoom={scaleX:1,offsetX:0};renderGraph();}
+  else showToast('Check date format');
+}
+
+function resetGraphView(){
+  gZoom={scaleX:1,offsetX:0};
+  renderGraph();
+}
+
+function getFilteredEntries(){
+  const now=new Date();
+  let from;
+  if(gFilter==='today'){
+    const start=new Date(now);start.setHours(0,0,0,0);
+    return entries.filter(e=>entryDate(e)>=start).sort((a,b)=>entryDate(a)-entryDate(b));
+  } else if(gFilter==='7d') from=new Date(now-7*864e5);
+  else if(gFilter==='14d') from=new Date(now-14*864e5);
+  else if(gFilter==='30d') from=new Date(now-30*864e5);
+  else if(gFilter==='3m') from=new Date(now-90*864e5);
+  else if(gFilter==='custom'&&gCustomFrom&&gCustomTo){
+    return entries.filter(e=>{
+      const d=entryDate(e);
+      return d>=gCustomFrom&&d<=gCustomTo;
+    }).sort((a,b)=>entryDate(a)-entryDate(b));
+  }
+  return entries.filter(e=>entryDate(e)>=from).sort((a,b)=>entryDate(a)-entryDate(b));
+}
+
+function entryDate(e){
+  // Parse "13 Mar 2026 · 08:30 AM" or just use id as fallback
+  try{
+    const str=e.date+(e.time?' '+e.time:'');
+    const d=new Date(str);
+    if(!isNaN(d))return d;
+  }catch{}
+  return new Date(e.id);
+}
+
+function dotColor(g,low,high){
+  if(g<low) return C.RED;
+  if(g>high) return C.YELLOW;
+  return C.GREEN;
+}
+
+// ── MAIN GRAPH RENDER ──
+function renderGraph(){
+  const canvas=document.getElementById('graph-canvas');
+  if(!canvas)return;
+  const wrap=canvas.parentElement;
+  const DPR=window.devicePixelRatio||1;
+  const W=wrap.clientWidth;
+  const H=220;
+  canvas.width=W*DPR;
+  canvas.height=H*DPR;
+  canvas.style.width=W+'px';
+  canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(DPR,DPR);
+
+  const LOW=graphLow(), HIGH=graphHigh();
+  const YMIN=0, YMAX=25;
+  const PAD={l:34,r:12,t:14,b:30};
+  const gw=W-PAD.l-PAD.r;
+  const gh=H-PAD.t-PAD.b;
+
+  const filtered=getFilteredEntries();
+  renderSummary(filtered);
+  if(!filtered.length){
+    ctx.fillStyle='rgba(255,255,255,0.2)';
+    ctx.font='14px DM Sans,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('No entries in this range',W/2,H/2);
+    return;
+  }
+
+  const minT=entryDate(filtered[0]).getTime();
+  const maxT=entryDate(filtered[filtered.length-1]).getTime();
+  const span=Math.max(maxT-minT,864e5); // at least 1 day
+
+  // Apply zoom/pan
+  const {scaleX,offsetX}=gZoom;
+  function tx(t){
+    const raw=PAD.l+(((t-minT)/span)*gw);
+    return PAD.l+((raw-PAD.l)*scaleX)+offsetX;
+  }
+  function ty(g){return PAD.t+gh-(((g-YMIN)/(YMAX-YMIN))*gh);}
+
+  // ── RANGE BANDS ──
+  ctx.fillStyle='rgba(224,128,128,0.10)';
+  ctx.fillRect(PAD.l,PAD.t+gh-(ty(YMIN)-ty(LOW)),gw,ty(YMIN)-ty(LOW)); // below low
+  ctx.fillStyle='rgba(126,200,160,0.22)';
+  ctx.fillRect(PAD.l,ty(HIGH),gw,ty(LOW)-ty(HIGH)); // ideal band — brighter
+  ctx.fillStyle='rgba(232,193,116,0.10)';
+  ctx.fillRect(PAD.l,PAD.t,gw,ty(HIGH)-PAD.t); // above high
+
+  // ── GRID LINES + Y LABELS ──
+  ctx.textAlign='right';
+  ctx.font=`9px DM Sans,sans-serif`;
+  for(let g=Math.ceil(YMIN);g<=YMAX;g+=2){
+    const yy=ty(g);
+    ctx.strokeStyle=g===LOW||g===HIGH?'rgba(126,200,160,0.6)':C.GRID;
+    ctx.lineWidth=g===LOW||g===HIGH?1.5:0.5;
+    ctx.beginPath();ctx.moveTo(PAD.l,yy);ctx.lineTo(PAD.l+gw,yy);ctx.stroke();
+    ctx.fillStyle=g===LOW||g===HIGH?'rgba(126,200,160,0.9)':C.TEXT;
+    ctx.fillText(g.toFixed(0),PAD.l-4,yy+3);
+  }
+
+  // ── X AXIS LABELS ──
+  ctx.textAlign='center';
+  ctx.font='9px DM Sans,sans-serif';
+  ctx.fillStyle=C.TEXT;
+  const days=span/864e5;
+  const isToday=gFilter==='today';
+
+  if(isToday){
+    // Show 3-hourly time labels across the day
+    const dayStart=new Date(minT);dayStart.setHours(0,0,0,0);
+    for(let h=0;h<24;h+=3){
+      const t=new Date(dayStart);t.setHours(h);
+      const xx=tx(t.getTime());
+      if(xx<PAD.l-5||xx>PAD.l+gw+5)continue;
+      ctx.strokeStyle=C.GRID;ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.moveTo(xx,PAD.t);ctx.lineTo(xx,PAD.t+gh);ctx.stroke();
+      const lbl=fmt12h(h);
+      ctx.fillText(lbl,xx,PAD.t+gh+12);
+    }
+  } else {
+    const step=days<=7?1:days<=30?2:7;
+    const startDay=new Date(minT);startDay.setHours(0,0,0,0);
+    for(let d=new Date(startDay);d.getTime()<=maxT+864e5;d.setDate(d.getDate()+step)){
+      const xx=tx(d.getTime());
+      if(xx<PAD.l||xx>PAD.l+gw)continue;
+      ctx.strokeStyle=C.GRID;ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.moveTo(xx,PAD.t);ctx.lineTo(xx,PAD.t+gh);ctx.stroke();
+      const lbl=d.toLocaleDateString('en-SG',{day:'numeric',month:'short'});
+      ctx.fillText(lbl,xx,PAD.t+gh+12);
+    }
+  }
+
+  // ── WEEKLY SPLIT LINES (Sunday) — only when > 7 days ──
+  if(days>7){
+    const d=new Date(minT);
+    d.setHours(0,0,0,0);
+    // Move to next Sunday
+    while(d.getDay()!==0) d.setDate(d.getDate()+1);
+    while(d.getTime()<=maxT){
+      const xx=tx(d.getTime());
+      if(xx>=PAD.l&&xx<=PAD.l+gw){
+        ctx.save();
+        ctx.strokeStyle='rgba(255,255,255,0.12)';
+        ctx.lineWidth=1;
+        ctx.setLineDash([4,4]);
+        ctx.beginPath();ctx.moveTo(xx,PAD.t);ctx.lineTo(xx,PAD.t+gh);ctx.stroke();
+        ctx.setLineDash([]);
+        // Draw outline sun (circle + rays)
+        ctx.save();
+        ctx.strokeStyle='rgba(255,255,255,0.28)';
+        ctx.lineWidth=1;
+        const sr=4, sx=xx, sy=PAD.t+9;
+        ctx.beginPath();ctx.arc(sx,sy,sr,0,Math.PI*2);ctx.stroke();
+        for(let a=0;a<8;a++){
+          const angle=(a/8)*Math.PI*2;
+          const x1=sx+Math.cos(angle)*(sr+2);
+          const y1=sy+Math.sin(angle)*(sr+2);
+          const x2=sx+Math.cos(angle)*(sr+4);
+          const y2=sy+Math.sin(angle)*(sr+4);
+          ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+        }
+        ctx.restore();
+        ctx.restore();
+      }
+      d.setDate(d.getDate()+7);
+    }
+  }
+
+  // ── GLUCOSE LINE ──
+  const glucosePts=filtered.filter(e=>e.glucose!=null);
+  if(glucosePts.length>1){
+    ctx.beginPath();
+    ctx.strokeStyle=C.LINE;ctx.lineWidth=2;ctx.lineJoin='round';
+    glucosePts.forEach((e,i)=>{
+      const x=tx(entryDate(e).getTime()),y=ty(e.glucose);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+
+  // ── HIT TARGETS (reset each render) ──
+  gHitTargets=[];
+
+  // ── DOTS (glucose entries) ──
+  glucosePts.forEach(e=>{
+    const x=tx(entryDate(e).getTime()),y=ty(e.glucose);
+    const col=dotColor(e.glucose,LOW,HIGH);
+    const isSelected=gSelectedEntry&&gSelectedEntry.id===e.id;
+    const r=isSelected?9:5.5;
+    if(isSelected){
+      // glow ring
+      ctx.beginPath();ctx.arc(x,y,r+4,0,Math.PI*2);
+      ctx.fillStyle=col.replace(')',',0.25)').replace('rgb','rgba');
+      ctx.fill();
+    }
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=isSelected?'#fff':col;
+    ctx.fill();
+    ctx.strokeStyle=isSelected?col:C.BG;ctx.lineWidth=isSelected?2.5:1.5;ctx.stroke();
+    gHitTargets.push({x,y,r:12,entry:e,type:'dot'});
+  });
+
+  // ── TRIANGLES (non-glucose entries) ──
+  const nonGlucose=filtered.filter(e=>e.glucose==null);
+  nonGlucose.forEach(e=>{
+    const x=tx(entryDate(e).getTime());
+    const yBase=PAD.t+gh-4;
+    const size=gSelectedEntry&&gSelectedEntry.id===e.id?11:8;
+    const isSelected=gSelectedEntry&&gSelectedEntry.id===e.id;
+    ctx.beginPath();
+    ctx.moveTo(x,yBase-size*1.4);
+    ctx.lineTo(x-size,yBase);
+    ctx.lineTo(x+size,yBase);
+    ctx.closePath();
+    ctx.strokeStyle=isSelected?'rgba(200,200,230,1)':C.TRI_OUT;
+    ctx.lineWidth=isSelected?2.5:1.5;ctx.stroke();
+    ctx.fillStyle=isSelected?'rgba(160,160,190,0.35)':'rgba(160,160,190,0.12)';ctx.fill();
+    gHitTargets.push({x,y:yBase-size*0.7,r:12,entry:e,type:'tri'});
+  });
+
+  // ── AXES ──
+  ctx.strokeStyle=C.AXIS;ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(PAD.l,PAD.t);ctx.lineTo(PAD.l,PAD.t+gh);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(PAD.l,PAD.t+gh);ctx.lineTo(PAD.l+gw,PAD.t+gh);ctx.stroke();
+
+  // ── AGP ──
+  renderAGP();
+}
+
+// ── AGP RENDER ──
+function renderAGP(){
+  const canvas=document.getElementById('agp-canvas');
+  if(!canvas)return;
+  const wrap=canvas.parentElement;
+  const DPR=window.devicePixelRatio||1;
+  const W=wrap.clientWidth;
+  const H=200;
+  canvas.width=W*DPR;
+  canvas.height=H*DPR;
+  canvas.style.width=W+'px';
+  canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(DPR,DPR);
+
+  const LOW=graphLow(), HIGH=graphHigh();
+  const YMIN=0, YMAX=25;
+  const PAD={l:34,r:12,t:14,b:30};
+  const gw=W-PAD.l-PAD.r;
+  const gh=H-PAD.t-PAD.b;
+
+  const filtered=getFilteredEntries().filter(e=>e.glucose!=null);
+
+  // Group by hour-of-day
+  const byHour={};
+  for(let h=0;h<24;h++) byHour[h]=[];
+  filtered.forEach(e=>{
+    const d=entryDate(e);
+    byHour[d.getHours()].push(e.glucose);
+  });
+
+  function tx(h){
+    const raw=PAD.l+(h/24)*gw;
+    return PAD.l+((raw-PAD.l)*agpZoom.scaleX)+agpZoom.offsetX;
+  }
+  function ty(g){return PAD.t+gh-(((g-YMIN)/(YMAX-YMIN))*gh);}
+  function pct(arr,p){
+    if(!arr.length)return null;
+    const s=[...arr].sort((a,b)=>a-b);
+    const i=(p/100)*(s.length-1);
+    const lo=Math.floor(i),hi=Math.ceil(i);
+    return s[lo]+(s[hi]-s[lo])*(i-lo);
+  }
+
+  // Range bands (always full width, no zoom)
+  ctx.fillStyle='rgba(224,128,128,0.10)';
+  ctx.fillRect(PAD.l,PAD.t+gh,gw,ty(YMIN)-ty(LOW));
+  ctx.fillStyle='rgba(126,200,160,0.22)';
+  ctx.fillRect(PAD.l,ty(HIGH),gw,ty(LOW)-ty(HIGH));
+  ctx.fillStyle='rgba(232,193,116,0.10)';
+  ctx.fillRect(PAD.l,PAD.t,gw,ty(HIGH)-PAD.t);
+
+  // Grid
+  ctx.textAlign='right';ctx.font='9px DM Sans,sans-serif';ctx.fillStyle=C.TEXT;
+  for(let g=Math.ceil(YMIN);g<=YMAX;g+=2){
+    const yy=ty(g);
+    ctx.strokeStyle=g===LOW||g===HIGH?'rgba(126,200,160,0.6)':C.GRID;
+    ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(PAD.l,yy);ctx.lineTo(PAD.l+gw,yy);ctx.stroke();
+    ctx.fillText(g.toFixed(0),PAD.l-4,yy+3);
+  }
+
+  // X labels 3-hourly
+  ctx.textAlign='center';ctx.font='9px DM Sans,sans-serif';ctx.fillStyle=C.TEXT;
+  for(let h=0;h<24;h+=3){
+    const xx=tx(h);
+    const lbl=fmt12h(h);
+    ctx.strokeStyle=C.GRID;ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(xx,PAD.t);ctx.lineTo(xx,PAD.t+gh);ctx.stroke();
+    ctx.fillText(lbl,xx,PAD.t+gh+12);
+  }
+
+  // Build percentile arrays
+  const p25=[],p50=[],p75=[];
+  for(let h=0;h<24;h++){
+    p25.push(pct(byHour[h],25));
+    p50.push(pct(byHour[h],50));
+    p75.push(pct(byHour[h],75));
+  }
+
+  // Band 25-75
+  const validHours=p25.map((v,i)=>v!=null&&p75[i]!=null?i:null).filter(v=>v!==null);
+  if(validHours.length>1){
+    ctx.beginPath();
+    validHours.forEach((h,i)=>{
+      const x=tx(h+0.5),y=ty(p75[h]);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    [...validHours].reverse().forEach(h=>{
+      ctx.lineTo(tx(h+0.5),ty(p25[h]));
+    });
+    ctx.closePath();
+    ctx.fillStyle=C.AGP_BAND;ctx.fill();
+
+    // Median line
+    ctx.beginPath();ctx.strokeStyle=C.AGP_LINE;ctx.lineWidth=2;ctx.lineJoin='round';
+    validHours.forEach((h,i)=>{
+      const x=tx(h+0.5),y=ty(p50[h]);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  } else {
+    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='12px DM Sans,sans-serif';ctx.textAlign='center';
+    ctx.fillText('Not enough data yet',W/2,H/2);
+  }
+
+  // Axes
+  ctx.strokeStyle=C.AXIS;ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(PAD.l,PAD.t);ctx.lineTo(PAD.l,PAD.t+gh);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(PAD.l,PAD.t+gh);ctx.lineTo(PAD.l+gw,PAD.t+gh);ctx.stroke();
+}
+
+// ── ZOOM & PAN ──
+function initGraphInteraction(){
+  const canvas=document.getElementById('graph-canvas');
+  if(!canvas||canvas._initDone)return;
+  canvas._initDone=true;
+
+  let touchStartX=0,touchStartY=0,isDeterminingDir=false,touchDir=null;
+
+  canvas.addEventListener('touchstart',e=>{
+    if(e.touches.length===2){
+      gPinch.active=true;
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      gPinch.startDist=Math.sqrt(dx*dx+dy*dy);
+      gPinch.startScale=gZoom.scaleX;
+      gPinch.startMidX=(e.touches[0].clientX+e.touches[1].clientX)/2;
+      gPinch.startOX=gZoom.offsetX;
+      e.preventDefault();
+    } else if(e.touches.length===1){
+      gDrag.active=true;
+      gDrag.startX=e.touches[0].clientX;
+      gDrag.startOX=gZoom.offsetX;
+      touchStartX=e.touches[0].clientX;
+      touchStartY=e.touches[0].clientY;
+      isDeterminingDir=true;
+      touchDir=null;
+    }
+  },{passive:false});
+
+  canvas.addEventListener('touchmove',e=>{
+    if(gPinch.active&&e.touches.length===2){
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const scale=Math.max(1,Math.min(20,gPinch.startScale*(dist/gPinch.startDist)));
+      gZoom.scaleX=scale;
+      const rect=canvas.getBoundingClientRect();
+      const PAD_L=34,gw=rect.width-PAD_L-12;
+      const midFrac=(gPinch.startMidX-rect.left-PAD_L)/gw;
+      gZoom.offsetX=gPinch.startOX+(scale-gPinch.startScale)*(-midFrac*gw);
+      clampPan(rect.width);
+      renderGraph();e.preventDefault();
+      return;
+    }
+    if(!gDrag.active||e.touches.length!==1)return;
+    const cx=e.touches[0].clientX, cy=e.touches[0].clientY;
+    // Determine scroll direction on first meaningful move
+    if(isDeterminingDir){
+      const adx=Math.abs(cx-touchStartX), ady=Math.abs(cy-touchStartY);
+      if(adx<4&&ady<4)return; // too small to determine
+      touchDir=adx>ady?'h':'v';
+      isDeterminingDir=false;
+    }
+    if(touchDir==='v'){
+      // Vertical — let page scroll naturally, don't pan
+      return;
+    }
+    // Horizontal — pan the graph
+    if(gZoom.scaleX>1){
+      gZoom.offsetX=gDrag.startOX+(cx-touchStartX);
+      clampPan(canvas.getBoundingClientRect().width);
+      renderGraph();
+    }
+    e.preventDefault();
+  },{passive:false});
+
+  canvas.addEventListener('touchend',e=>{
+    if(e.touches.length<2)gPinch.active=false;
+    if(e.touches.length===0){
+      gDrag.active=false;
+      isDeterminingDir=false;
+      touchDir=null;
+      if(e.changedTouches.length===1){
+        const rect=canvas.getBoundingClientRect();
+        const tx=e.changedTouches[0].clientX-rect.left;
+        const ty=e.changedTouches[0].clientY-rect.top;
+        // Only fire tap if movement was tiny
+        const moved=Math.abs(e.changedTouches[0].clientX-touchStartX)+Math.abs(e.changedTouches[0].clientY-touchStartY);
+        if(moved<10)handleGraphTap(tx,ty);
+      }
+    }
+  });
+
+  // Mouse wheel zoom
+  canvas.addEventListener('wheel',e=>{
+    const rect=canvas.getBoundingClientRect();
+    const PAD_L=34,gw=rect.width-PAD_L-12;
+    const frac=(e.clientX-rect.left-PAD_L)/gw;
+    const delta=e.deltaY>0?0.85:1.15;
+    const newScale=Math.max(1,Math.min(20,gZoom.scaleX*delta));
+    gZoom.offsetX=gZoom.offsetX+(newScale-gZoom.scaleX)*(-frac*gw);
+    gZoom.scaleX=newScale;
+    clampPan(rect.width);
+    renderGraph();e.preventDefault();
+  },{passive:false});
+}
+
+function clampPan(W){
+  const PAD_L=34,gw=W-PAD_L-12;
+  const maxOX=0;
+  const minOX=-(gZoom.scaleX-1)*gw;
+  gZoom.offsetX=Math.max(minOX,Math.min(maxOX,gZoom.offsetX));
+}
+
+// ── TAP HANDLER ──
+function handleGraphTap(mx,my){
+  let best=null,bestDist=Infinity;
+  gHitTargets.forEach(h=>{
+    const d=Math.sqrt((mx-h.x)**2+(my-h.y)**2);
+    if(d<h.r&&d<bestDist){bestDist=d;best=h;}
+  });
+  if(best) showEntryPopup(best.entry,mx,my);
+  else closeEntryPopup();
+}
+
+function showEntryPopup(entry,mx,my){
+  gSelectedEntry=entry;
+  renderGraph(); // re-render to show highlight
+  const popup=document.getElementById('entry-popup');
+  const LOW=graphLow(),HIGH=graphHigh();
+  let glucoHTML='';
+  if(entry.glucose!=null){
+    const col=dotColor(entry.glucose,LOW,HIGH);
+    glucoHTML=`<span class="pill pill-red" style="background:${col}20;border:1px solid ${col};color:${col};font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px">🩸 ${entry.glucose} mmol</span>`;
+  }
+  const ctxHTML=entry.context?`<span class="pill pill-blue" style="font-size:11px">${esc(entry.context)}</span>`:'';
+  const amtHTML=entry.amount?`<span class="pill pill-amber" style="font-size:11px">📏 ${esc(entry.amount)}</span>`:'';
+  const insHTML=entry.insulin?`<span class="pill pill-green" style="font-size:11px">💉 ${esc(entry.insulin)}u</span>`:'';
+
+  popup.innerHTML=`
+    <button class="ep-close" onclick="closeEntryPopup()">✕</button>
+    <div class="ep-time">${formatDateTime(entry)}</div>
+    ${entry.food?`<div class="ep-food">${esc(entry.food)}</div>`:''}
+    <div class="ep-pills">${glucoHTML}${ctxHTML}${amtHTML}${insHTML}</div>
+    ${entry.tags&&entry.tags.length?`<div class="card-tags" style="margin-bottom:4px">${entry.tags.map(t=>`<span class="card-tag">#${t}</span>`).join('')}</div>`:''}
+    ${entry.remarks?`<div class="ep-remarks">${esc(entry.remarks)}</div>`:''}
+  `;
+
+  // Position popup at center of screen always
+  popup.style.display='block';
+  const pw=280;
+  const vw=window.innerWidth,vh=window.innerHeight;
+  popup.style.left=Math.max(8,(vw-pw)/2)+'px';
+  popup.style.top=Math.max(8,(vh-200)/2)+'px';
+
+  // Close on tap outside
+  setTimeout(()=>document.addEventListener('click',closeEntryPopupOutside,{once:true}),100);
+}
+function closeEntryPopup(){
+  document.getElementById('entry-popup').style.display='none';
+  gSelectedEntry=null;
+  renderGraph();
+}
+function closeEntryPopupOutside(e){
+  const popup=document.getElementById('entry-popup');
+  if(!popup.contains(e.target))closeEntryPopup();
+}
+
+// Init graph interactions after DOM ready
+function initAgpInteraction(){
+  const canvas=document.getElementById('agp-canvas');
+  if(!canvas||canvas._initDone)return;
+  canvas._initDone=true;
+
+  canvas.addEventListener('touchstart',e=>{
+    if(e.touches.length===2){
+      agpPinch.active=true;
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      agpPinch.startDist=Math.sqrt(dx*dx+dy*dy);
+      agpPinch.startScale=agpZoom.scaleX;
+      agpPinch.startMidX=(e.touches[0].clientX+e.touches[1].clientX)/2;
+      agpPinch.startOX=agpZoom.offsetX;
+      e.preventDefault();
+    } else if(e.touches.length===1){
+      agpDrag.active=true;
+      agpDrag.startX=e.touches[0].clientX;
+      agpDrag.startOX=agpZoom.offsetX;
+    }
+  },{passive:false});
+
+  canvas.addEventListener('touchmove',e=>{
+    if(agpPinch.active&&e.touches.length===2){
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const scale=Math.max(1,Math.min(20,agpPinch.startScale*(dist/agpPinch.startDist)));
+      agpZoom.scaleX=scale;
+      const rect=canvas.getBoundingClientRect();
+      const PAD_L=34,gw=rect.width-PAD_L-12;
+      const midFrac=(agpPinch.startMidX-rect.left-PAD_L)/gw;
+      agpZoom.offsetX=agpPinch.startOX+(scale-agpPinch.startScale)*(-midFrac*gw);
+      clampAgpPan(rect.width);
+      renderAGP();e.preventDefault();
+    } else if(agpDrag.active&&e.touches.length===1&&agpZoom.scaleX>1){
+      const dx=e.touches[0].clientX-agpDrag.startX;
+      agpZoom.offsetX=agpDrag.startOX+dx;
+      clampAgpPan(canvas.getBoundingClientRect().width);
+      renderAGP();e.preventDefault();
+    }
+  },{passive:false});
+
+  canvas.addEventListener('touchend',e=>{
+    if(e.touches.length<2)agpPinch.active=false;
+    if(e.touches.length===0)agpDrag.active=false;
+  });
+
+  canvas.addEventListener('wheel',e=>{
+    const rect=canvas.getBoundingClientRect();
+    const PAD_L=34,gw=rect.width-PAD_L-12;
+    const frac=(e.clientX-rect.left-PAD_L)/gw;
+    const delta=e.deltaY>0?0.85:1.15;
+    const newScale=Math.max(1,Math.min(20,agpZoom.scaleX*delta));
+    agpZoom.offsetX=agpZoom.offsetX+(newScale-agpZoom.scaleX)*(-frac*gw);
+    agpZoom.scaleX=newScale;
+    clampAgpPan(rect.width);
+    renderAGP();e.preventDefault();
+  },{passive:false});
+}
+
+function clampAgpPan(W){
+  const PAD_L=34,gw=W-PAD_L-12;
+  agpZoom.offsetX=Math.max(-(agpZoom.scaleX-1)*gw,Math.min(0,agpZoom.offsetX));
+}
+
+document.addEventListener('DOMContentLoaded',()=>{initGraphInteraction();initAgpInteraction();});
+
+// ── GRAPH SUMMARY ──
+function renderSummary(filtered){
+  const LOW=graphLow(),HIGH=graphHigh();
+  const gEntries=filtered.filter(e=>e.glucose!=null);
+  const avg=gEntries.length?(gEntries.reduce((s,e)=>s+e.glucose,0)/gEntries.length):null;
+  const avgStr=avg?avg.toFixed(1):'—';
+  // Estimated HbA1c: (avg mmol/L + 2.59) / 1.59
+  const hba1c=avg?((avg+2.59)/1.59).toFixed(1):'—';
+  const tir=gEntries.length?Math.round(gEntries.filter(e=>e.glucose>=LOW&&e.glucose<=HIGH).length/gEntries.length*100):'—';
+  const hi=gEntries.length?Math.round(gEntries.filter(e=>e.glucose>HIGH).length/gEntries.length*100):'—';
+  const lo=gEntries.length?Math.round(gEntries.filter(e=>e.glucose<LOW).length/gEntries.length*100):'—';
+  document.getElementById('gs-avg').textContent=avgStr;
+  document.getElementById('gs-hba1c').textContent=hba1c!=='—'?hba1c+'%':'—';
+  document.getElementById('gs-tir').textContent=tir!=='—'?tir+'%':'—';
+  document.getElementById('gs-high').textContent=hi!=='—'?hi+'%':'—';
+  document.getElementById('gs-low').textContent=lo!=='—'?lo+'%':'—';
+  // TIR bar — no labels, dark text, taller
+  const bar=document.getElementById('tir-bar');
+  if(gEntries.length&&tir!=='—'){
+    const tirN=Number(tir),hiN=Number(hi),loN=Number(lo);
+    bar.innerHTML=`
+      <div class="tir-seg" style="width:${loN}%;background:#e08080">${loN>6?loN+'%':''}</div>
+      <div class="tir-seg" style="width:${tirN}%;background:#7ec8a0">${tirN>8?tirN+'%':''}</div>
+      <div class="tir-seg" style="width:${hiN}%;background:#e8c174">${hiN>6?hiN+'%':''}</div>`;
+  } else {
+    bar.innerHTML='<div style="width:100%;height:100%;background:rgba(255,255,255,.05);border-radius:6px"></div>';
+  }
+}
+const BACKUP_KEY='gluco-diary-backup';
+function autoBackup(){
+  try{
+    const ts=new Date().toISOString();
+    localStorage.setItem(BACKUP_KEY,JSON.stringify({entries,starMap,backedUpAt:ts}));
+  }catch{}
+}
+function manualBackup(){
+  autoBackup();
+  updateBackupStatus();
+  showToast('✓ Backup saved');
+}
+function updateBackupStatus(){
+  const el=document.getElementById('backup-status');
+  if(!el)return;
+  try{
+    const raw=localStorage.getItem(BACKUP_KEY);
+    if(raw){
+      const p=JSON.parse(raw);
+      const d=new Date(p.backedUpAt);
+      const cnt=p.entries?p.entries.length:0;
+      el.textContent=`${d.toLocaleDateString('en-SG',{day:'numeric',month:'short',year:'numeric'})} · ${d.toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit',hour12:true})} · ${cnt} entries`;
+    } else {
+      el.textContent='No backup yet';
+    }
+  }catch{el.textContent='No backup yet';}
+}
+function restoreBackup(){
+  try{
+    const raw=localStorage.getItem(BACKUP_KEY);
+    if(!raw){showToast('No backup found');return;}
+    const p=JSON.parse(raw);
+    const d=new Date(p.backedUpAt);
+    const when=d.toLocaleDateString('en-SG',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit',hour12:true});
+    showConfirm(`Restore ${p.entries?p.entries.length:0} entries\nfrom backup saved\n${when}?\n\nThis replaces current data.`,()=>{
+      entries=p.entries||[];starMap=p.starMap||{};
+      saveData();updateAllTabCount();renderAll();
+      updateBackupStatus();
+      showToast('✓ Restored from backup');
+    });
+  }catch{showToast('Backup read error');}
+}
+
+// ── EXPORT JSON ──
+function exportJSON(){
+  const data=JSON.stringify({entries,starMap,exportedAt:new Date().toISOString(),version:1},null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const date=new Date().toISOString().slice(0,10);
+  a.href=url;a.download=`gluco-diary-${date}.json`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('✓ JSON exported');
+}
+
+// ── IMPORT JSON ──
+let _pendingImport=null;
+function handleImport(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const p=JSON.parse(e.target.result);
+      if(!p.entries){showToast('Invalid file');return;}
+      _pendingImport=p;
+      showImportChoice(p);
+    }catch{showToast('Could not read file');}
+    event.target.value='';
+  };
+  reader.readAsText(file);
+}
+function showImportChoice(p){
+  const overlay=document.getElementById('modal-overlay');
+  overlay.style.zIndex='600';
+  overlay.innerHTML=`<div class="modal-overlay" onclick="event.stopPropagation()">
+    <div class="modal-box" style="max-width:320px">
+      <div class="modal-msg" style="font-size:14px;line-height:1.6">
+        Found <strong style="color:var(--accent)">${p.entries.length} entries</strong> in this file.<br>How would you like to import?
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <button class="btn-save-edit" onclick="doImport('merge')" style="font-size:13px">Merge with existing</button>
+        <button class="btn-save-edit" onclick="doImport('replace')" style="background:rgba(255,140,80,.15);border:1px solid rgba(255,140,80,.4);color:#ffaa70;font-size:13px">Replace all existing</button>
+        <button class="btn-cancel-edit" onclick="closeConfirm()" style="font-size:13px">Cancel</button>
+      </div>
+    </div></div>`;
+  overlay.style.display='block';
+}
+function doImport(mode){
+  closeConfirm();
+  if(!_pendingImport)return;
+  const p=_pendingImport;_pendingImport=null;
+  if(mode==='replace'){
+    entries=p.entries;starMap=p.starMap||{};
+  } else {
+    // Merge — avoid duplicate ids
+    const existingIds=new Set(entries.map(e=>e.id));
+    const newEntries=p.entries.filter(e=>!existingIds.has(e.id));
+    entries=[...entries,...newEntries];
+    entries.sort((a,b)=>b.id-a.id);
+    // Merge starMap
+    Object.assign(starMap,p.starMap||{});
+  }
+  saveData();autoBackup();updateAllTabCount();renderAll();
+  showToast(`✓ Imported ${p.entries.length} entries`);
+}
+
+// ── EXPORT PDF ──
+function exportPDF(){
+  const now=new Date();
+  const patientName=localStorage.getItem('gd-patient')||'—';
+  const LOW=graphLow()||4, HIGH=graphHigh()||10;
+  const VHIGH=13.9, VLOW=3.0;
+  const dateStr=now.toLocaleDateString('en-SG',{day:'numeric',month:'long',year:'numeric'});
+  const allSorted=[...entries].sort((a,b)=>entryDate(a)-entryDate(b));
+  const gEntries=allSorted.filter(e=>e.glucose!=null);
+
+  // Date range
+  const firstDate=allSorted.length?allSorted[0].date:'—';
+  const lastDate=allSorted.length?allSorted[allSorted.length-1].date:'—';
+  const daySpan=allSorted.length?Math.round((entryDate(allSorted[allSorted.length-1])-entryDate(allSorted[0]))/864e5)+1:0;
+
+  // Stats
+  const avg=gEntries.length?(gEntries.reduce((s,e)=>s+e.glucose,0)/gEntries.length):null;
+  const avgStr=avg?avg.toFixed(1):'—';
+  const cv=gEntries.length>1?(()=>{const mean=avg;const sd=Math.sqrt(gEntries.reduce((s,e)=>s+(e.glucose-mean)**2,0)/gEntries.length);return((sd/mean)*100).toFixed(1);})():'—';
+  const pct=(arr,lo,hi)=>arr.length?Math.round(arr.filter(e=>e.glucose>=lo&&e.glucose<hi).length/arr.length*100):0;
+  const tirPct=pct(gEntries,LOW,HIGH);
+  const hiPct=pct(gEntries,HIGH,VHIGH);
+  const vhiPct=pct(gEntries,VHIGH,99);
+  const loPct=pct(gEntries,VLOW,LOW);
+  const vloPct=pct(gEntries,0,VLOW);
+  const tirMin=gEntries.length?Math.round(tirPct/100*gEntries.length*5):0; // rough
+  const toTime=(pct,total)=>{if(!total)return '—';const mins=Math.round(pct/100*24*60);return `${Math.floor(mins/60)}h ${mins%60}min`;};
+
+  // Group by date for daily log
+  const byDate={};
+  allSorted.forEach(e=>{
+    const d=e.date||'Unknown';
+    if(!byDate[d])byDate[d]=[];
+    byDate[d].push(e);
+  });
+
+  // Helper: row highlight
+  const rowBg=(g)=>{
+    if(g==null)return '#fff';
+    if(g>=VHIGH)return '#fff3cd';
+    if(g>HIGH)return '#fff9e6';
+    if(g>=LOW&&g<=HIGH)return '#f0faf4';
+    if(g>=VLOW)return '#fde8e8';
+    return '#fcc';
+  };
+  const gColor=(g)=>{
+    if(g==null)return '#333';
+    if(g>=VHIGH)return '#b45309';
+    if(g>HIGH)return '#d97706';
+    if(g>=LOW)return '#15803d';
+    if(g>=VLOW)return '#dc2626';
+    return '#991b1b';
+  };
+
+  // Build daily rows
+  let dailyHTML='';
+  Object.entries(byDate).forEach(([date,dayEntries])=>{
+    // Day header
+    const dow=new Date(dayEntries[0].id).toLocaleDateString('en-SG',{weekday:'short'}).toUpperCase();
+    dailyHTML+=`
+    <div class="day-block">
+      <div class="day-hdr"><span class="day-dow">${dow}</span> <span class="day-date">${date}</span></div>
+      <table class="day-table">
+        <thead><tr>
+          <th>Time</th><th>Glucose<br><span style="font-weight:400;font-size:9px">mmol/L</span></th>
+          <th>Event</th><th>Food</th><th>Amount</th><th>Insulin</th><th>Remarks</th>
+        </tr></thead>
+        <tbody>`;
+    dayEntries.forEach(e=>{
+      const g=e.glucose;
+      const gStr=g!=null?`<strong style="color:${gColor(g)}">${g}</strong>`:'—';
+      dailyHTML+=`<tr style="background:${rowBg(g)}">
+        <td class="td-time">${e.time||'—'}</td>
+        <td class="td-gluco">${gStr}</td>
+        <td class="td-sm">${e.context||'—'}</td>
+        <td class="td-food" style="text-transform:capitalize">${e.food||'—'}</td>
+        <td class="td-sm">${e.amount||'—'}</td>
+        <td class="td-sm">${e.insulin?e.insulin+'u':'—'}</td>
+        <td class="td-rem">${e.remarks||''}</td>
+      </tr>`;
+    });
+    dailyHTML+=`</tbody></table></div>`;
+  });
+
+  // Build TIR bar SVG
+  const totalW=400;
+  const barParts=[
+    {pct:vloPct,color:'#dc2626',label:'Very Low'},
+    {pct:loPct,color:'#f87171',label:'Low'},
+    {pct:tirPct,color:'#16a34a',label:'Target'},
+    {pct:hiPct,color:'#f59e0b',label:'High'},
+    {pct:vhiPct,color:'#d97706',label:'Very High'},
+  ];
+  let bx=0;
+  let barSvg=`<svg width="100%" height="28" style="border-radius:4px;overflow:hidden">`;
+  barParts.forEach(bp=>{
+    const w=bp.pct;
+    if(w>0){
+      barSvg+=`<rect x="${bx}%" y="0" width="${w}%" height="28" fill="${bp.color}"/>`;
+      if(w>6) barSvg+=`<text x="${bx+w/2}%" y="19" text-anchor="middle" font-size="10" fill="white" font-weight="bold">${w}%</text>`;
+      bx+=w;
+    }
+  });
+  barSvg+=`</svg>`;
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<title>Gluco Diary Report — ${dateStr}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;background:#fff;font-size:12px;line-height:1.4}
+  .page{max-width:860px;margin:0 auto;padding:28px 32px}
+  /* HEADER */
+  .report-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #15803d;padding-bottom:12px;margin-bottom:20px}
+  .report-title{font-size:26px;font-weight:700;color:#15803d;letter-spacing:-0.5px}
+  .report-sub{font-size:12px;color:#666;margin-top:2px}
+  .report-meta{text-align:right;font-size:11px;color:#555;line-height:1.8}
+  .report-meta strong{color:#1a1a1a}
+  /* SECTION HEADERS */
+  .sec-hdr{background:#1a1a1a;color:#fff;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;margin:20px 0 12px}
+  /* STATS GRID */
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+  .stats-box{border:1px solid #ddd;padding:14px}
+  .stats-box h3{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#555;border-bottom:1px solid #eee;padding-bottom:6px;margin-bottom:10px}
+  .stat-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:12px}
+  .stat-row:last-child{border-bottom:none}
+  .stat-row .lbl{color:#555}
+  .stat-row .val{font-weight:600;color:#1a1a1a}
+  .stat-row .val.green{color:#15803d}
+  /* TIME IN RANGES */
+  .tir-section{margin-bottom:20px}
+  .tir-row{display:flex;align-items:center;margin-bottom:6px;font-size:11px}
+  .tir-color{width:12px;height:12px;border-radius:2px;margin-right:8px;flex-shrink:0}
+  .tir-name{width:80px;color:#444}
+  .tir-range{width:110px;color:#888;font-size:10px}
+  .tir-pct{width:36px;font-weight:700;color:#1a1a1a;text-align:right}
+  .tir-time{width:80px;color:#666;text-align:right;font-size:10px}
+  .tir-bar-outer{flex:1;background:#f0f0f0;height:10px;border-radius:3px;margin:0 10px;overflow:hidden}
+  .tir-bar-inner{height:100%;border-radius:3px}
+  /* DAILY LOG */
+  .day-block{margin-bottom:18px;break-inside:avoid}
+  .day-hdr{background:#f5f5f5;padding:6px 10px;border-left:4px solid #15803d;margin-bottom:0}
+  .day-dow{font-size:11px;font-weight:700;color:#15803d;letter-spacing:1px}
+  .day-date{font-size:13px;font-weight:700;color:#1a1a1a;margin-left:6px}
+  .day-table{width:100%;border-collapse:collapse;font-size:11px}
+  .day-table th{background:#1a1a1a;color:#fff;padding:5px 7px;text-align:left;font-size:9px;letter-spacing:.5px;text-transform:uppercase;font-weight:700}
+  .day-table td{padding:5px 7px;border-bottom:1px solid #eee;vertical-align:top}
+  .day-table tr:last-child td{border-bottom:none}
+  .td-time{color:#666;white-space:nowrap;width:62px}
+  .td-gluco{width:56px;font-size:13px;text-align:center}
+  .td-sm{width:70px;color:#444}
+  .td-food{color:#1a1a1a;font-size:12px}
+  .td-rem{color:#777;font-style:italic;font-size:10px}
+  /* COLOUR KEY */
+  .colour-key{display:flex;gap:12px;flex-wrap:wrap;font-size:10px;margin-top:10px}
+  .ck-item{display:flex;align-items:center;gap:5px}
+  .ck-box{width:14px;height:10px;border-radius:2px}
+  @media print{
+    .page{padding:16px 20px}
+    .day-block{break-inside:avoid}
+    .sec-hdr{break-after:avoid}
+  }
+</style>
+</head><body><div class="page">
+
+<!-- HEADER -->
+<div class="report-header">
+  <div>
+    <div class="report-title">Gluco Diary</div>
+    <div class="report-sub">Glucose Management Report</div>
+    <div style="margin-top:8px;font-size:12px;color:#444">${firstDate} – ${lastDate} &nbsp;<span style="color:#888">(${daySpan} days)</span></div>
+  </div>
+  <div class="report-meta">
+    <div><strong>Patient:</strong> ${patientName}</div>
+    <div><strong>Generated:</strong> ${dateStr}</div>
+    <div><strong>Total entries:</strong> ${entries.length}</div>
+    <div><strong>Target range:</strong> ${LOW}–${HIGH} mmol/L</div>
+  </div>
+</div>
+
+<!-- GLUCOSE STATISTICS -->
+<div class="sec-hdr">Glucose Statistics and Targets</div>
+<div class="stats-grid">
+  <div class="stats-box">
+    <h3>Glucose Averages</h3>
+    <div class="stat-row"><span class="lbl">Average Glucose</span><span class="val green">${avgStr} mmol/L</span></div>
+    <div class="stat-row"><span class="lbl">Glucose Variability (%CV)</span><span class="val">${cv}%</span></div>
+    <div class="stat-row"><span class="lbl">Total readings logged</span><span class="val">${gEntries.length}</span></div>
+    <div class="stat-row"><span class="lbl">Target range</span><span class="val">${LOW}–${HIGH} mmol/L</span></div>
+  </div>
+  <div class="stats-box">
+    <h3>Time in Ranges (target %)</h3>
+    <div class="stat-row"><span class="lbl">Target range (${LOW}–${HIGH})</span><span class="val green">${tirPct}% &nbsp;<span style="font-weight:400;font-size:10px;color:#888">Goal &gt;70%</span></span></div>
+    <div class="stat-row"><span class="lbl">Above range (&gt;${HIGH})</span><span class="val" style="color:#d97706">${hiPct+vhiPct}% &nbsp;<span style="font-weight:400;font-size:10px;color:#888">Goal &lt;25%</span></span></div>
+    <div class="stat-row"><span class="lbl">Very high (&gt;${VHIGH})</span><span class="val" style="color:#b45309">${vhiPct}% &nbsp;<span style="font-weight:400;font-size:10px;color:#888">Goal &lt;5%</span></span></div>
+    <div class="stat-row"><span class="lbl">Below range (&lt;${LOW})</span><span class="val" style="color:#dc2626">${loPct+vloPct}% &nbsp;<span style="font-weight:400;font-size:10px;color:#888">Goal &lt;4%</span></span></div>
+  </div>
+</div>
+
+<!-- TIME IN RANGES VISUAL -->
+<div class="sec-hdr">Time in Ranges</div>
+<div style="margin-bottom:12px">${barSvg}</div>
+${[
+  {color:'#d97706',name:'Very High',range:`>${VHIGH} mmol/L`,pct:vhiPct},
+  {color:'#f59e0b',name:'High',range:`${HIGH}–${VHIGH} mmol/L`,pct:hiPct},
+  {color:'#16a34a',name:'Target Range',range:`${LOW}–${HIGH} mmol/L`,pct:tirPct},
+  {color:'#f87171',name:'Low',range:`${VLOW}–${LOW} mmol/L`,pct:loPct},
+  {color:'#dc2626',name:'Very Low',range:`<${VLOW} mmol/L`,pct:vloPct},
+].map(t=>`
+  <div class="tir-row">
+    <div class="tir-color" style="background:${t.color}"></div>
+    <div class="tir-name">${t.name}</div>
+    <div class="tir-range">${t.range}</div>
+    <div class="tir-bar-outer"><div class="tir-bar-inner" style="width:${t.pct}%;background:${t.color}"></div></div>
+    <div class="tir-pct">${t.pct}%</div>
+    <div class="tir-time">${toTime(t.pct,gEntries.length)}</div>
+  </div>`).join('')}
+
+<!-- DAILY LOG -->
+<div class="sec-hdr" style="margin-top:24px">Daily Log</div>
+<div class="colour-key">
+  <div class="ck-item"><div class="ck-box" style="background:#f0faf4;border:1px solid #ccc"></div>In range</div>
+  <div class="ck-item"><div class="ck-box" style="background:#fff9e6;border:1px solid #ccc"></div>Above range</div>
+  <div class="ck-item"><div class="ck-box" style="background:#fff3cd;border:1px solid #ccc"></div>Very high</div>
+  <div class="ck-item"><div class="ck-box" style="background:#fde8e8;border:1px solid #ccc"></div>Below range</div>
+  <div class="ck-item"><div class="ck-box" style="background:#fcc;border:1px solid #ccc"></div>Very low</div>
+</div>
+<div style="margin-top:14px">${dailyHTML}</div>
+
+<div style="margin-top:28px;padding-top:12px;border-top:1px solid #ddd;font-size:9px;color:#999;text-align:center">
+  Generated by Gluco Diary · ${dateStr} · Data is self-logged and should be reviewed with your healthcare provider
+</div>
+
+</div></body></html>`;
+
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const dateFile=now.toISOString().slice(0,10);
+  a.href=url;a.download=`gluco-diary-report-${dateFile}.html`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('✓ Report saved — open in Files, then print/share as PDF');
+}
+
+loadData();
+function seedSampleData(){
+  const now=new Date();
+  const sample=[
+    {daysAgo:14,h:7,m:30,glucose:6.2,context:'Pre-meal',food:'Nasi Lemak',amount:'1 plate',insulin:'4',remarks:'Felt fine'},
+    {daysAgo:14,h:10,m:0,glucose:9.1,context:'Post-meal',food:null,amount:null,insulin:null,remarks:null},
+    {daysAgo:13,h:7,m:15,glucose:5.8,context:'Pre-meal',food:'Roti Canai',amount:'2 pieces',insulin:'3',remarks:null},
+    {daysAgo:13,h:12,m:30,glucose:8.4,context:'Post-meal',food:'Chicken Rice',amount:'1 plate',insulin:'4',remarks:'Slightly high'},
+    {daysAgo:12,h:7,m:0,glucose:7.1,context:'Pre-meal',food:'Oats',amount:'1 bowl',insulin:'2',remarks:null},
+    {daysAgo:12,h:16,m:0,glucose:5.2,context:'Pre-Ex',food:null,amount:null,insulin:null,remarks:'Before gym'},
+    {daysAgo:12,h:17,m:30,glucose:4.8,context:'Post-Ex',food:null,amount:null,insulin:null,remarks:'Good workout'},
+    {daysAgo:11,h:8,m:0,glucose:6.9,context:'Pre-meal',food:'Toast',amount:'2 slices',insulin:'2',remarks:null},
+    {daysAgo:10,h:7,m:30,glucose:11.2,context:'Pre-meal',food:'Mee Goreng',amount:'1 plate',insulin:'5',remarks:'Spike — noted'},
+    {daysAgo:10,h:10,m:0,glucose:13.5,context:'Post-meal',food:null,amount:null,insulin:null,remarks:'Too high'},
+    {daysAgo:9,h:7,m:0,glucose:6.0,context:'Pre-meal',food:'Eggs',amount:'2',insulin:'1',remarks:null},
+    {daysAgo:8,h:8,m:15,glucose:5.5,context:'Pre-meal',food:'Bread',amount:'2 slices',insulin:'2',remarks:null},
+    {daysAgo:7,h:7,m:30,glucose:7.8,context:'Pre-meal',food:'Nasi Lemak',amount:'1 plate',insulin:'4',remarks:'Same as before'},
+    {daysAgo:7,h:11,m:0,glucose:10.2,context:'Post-meal',food:null,amount:null,insulin:null,remarks:null},
+    {daysAgo:6,h:7,m:0,glucose:6.3,context:'Pre-meal',food:'Oats',amount:'1 bowl',insulin:'2',remarks:null},
+    {daysAgo:5,h:7,m:30,glucose:5.9,context:'Pre-meal',food:'Kaya Toast',amount:'2 pieces',insulin:'2',remarks:null},
+    {daysAgo:4,h:8,m:0,glucose:8.8,context:'Pre-meal',food:'Prata',amount:'2 pieces',insulin:'4',remarks:'Crispy prata'},
+    {daysAgo:4,h:15,m:0,glucose:5.1,context:'Pre-Ex',food:null,amount:null,insulin:null,remarks:null},
+    {daysAgo:3,h:7,m:15,glucose:6.7,context:'Pre-meal',food:'Bee Hoon',amount:'1 plate',insulin:'3',remarks:null},
+    {daysAgo:2,h:7,m:30,glucose:7.2,context:'Pre-meal',food:'Chicken Rice',amount:'1 plate',insulin:'4',remarks:null},
+    {daysAgo:2,h:10,m:30,glucose:9.8,context:'Post-meal',food:null,amount:null,insulin:null,remarks:'A bit high'},
+    {daysAgo:1,h:7,m:0,glucose:6.1,context:'Pre-meal',food:'Oats',amount:'1 bowl',insulin:'2',remarks:null},
+    {daysAgo:0,h:7,m:30,glucose:6.8,context:'Pre-meal',food:'Nasi Lemak',amount:'1 plate',insulin:'4',remarks:'Today'},
+  ];
+  sample.forEach((s,i)=>{
+    const d=new Date(now);
+    d.setDate(d.getDate()-s.daysAgo);
+    d.setHours(s.h,s.m,0,0);
+    const date=d.toLocaleDateString('en-SG',{day:'numeric',month:'short',year:'numeric'});
+    const hh=s.h%12||12;
+    const ampm=s.h>=12?'PM':'AM';
+    const time=`${String(hh).padStart(2,'0')}:${String(s.m).padStart(2,'0')} ${ampm}`;
+    entries.push({id:d.getTime()+(i*7),date,time,glucose:s.glucose,context:s.context,
+      food:s.food,amount:s.amount,insulin:s.insulin,tags:[],remarks:s.remarks});
+  });
+  entries.sort((a,b)=>b.id-a.id);
+  saveData();updateAllTabCount();renderAll();
+  showToast('✓ Sample data added!');switchTab('entries');
+}
+updateAllTabCount();initTimestamp();
+</script>
+</body>
+</html>
